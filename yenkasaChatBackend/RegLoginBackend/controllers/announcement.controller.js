@@ -13,6 +13,16 @@ const ANNOUNCEMENT_LINK_PREFIX = '/announcements/';
 const SUPPORTED_AUDIENCES = new Set(['all', 'verified', 'admins', 'moderators', 'developers', 'community']);
 const SUPPORTED_STATUSES = new Set(['draft', 'scheduled', 'published']);
 
+function flagEnabled(value) {
+  return ['1', 'true', 'yes', 'on'].includes(String(value || '').trim().toLowerCase());
+}
+
+function firestoreProjectManagementBoot() {
+  return flagEnabled(process.env.SOFTOTECH_FIRESTORE_ONLY) ||
+    flagEnabled(process.env.PROJECT_MANAGEMENT_FIRESTORE_ONLY) ||
+    String(process.env.SOFTOTECH_BOOT_MODE || '').trim().toLowerCase() === 'firestore';
+}
+
 function isAnnouncementManager(user) {
   const rank = getPermissions(user).rank;
   return rank === 'ADMIN' || rank === 'SENIOR_DEVELOPER';
@@ -325,7 +335,7 @@ async function flushScheduledAnnouncements() {
   }
 }
 
-if (!global.__ANNOUNCEMENT_CRON_STARTED) {
+if (!firestoreProjectManagementBoot() && !global.__ANNOUNCEMENT_CRON_STARTED) {
   cron.schedule('* * * * *', () => {
     flushScheduledAnnouncements().catch(error => {
       console.error('[announcements] scheduler failed', error);

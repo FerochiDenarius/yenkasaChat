@@ -12,6 +12,20 @@ const SKIPPED_PREFIXES = [
 let installed = false;
 let suppressCapture = false;
 
+function flagEnabled(value) {
+  return ['1', 'true', 'yes', 'on'].includes(String(value || '').trim().toLowerCase());
+}
+
+function firestoreProjectManagementBoot() {
+  return flagEnabled(process.env.SOFTOTECH_FIRESTORE_ONLY) ||
+    flagEnabled(process.env.PROJECT_MANAGEMENT_FIRESTORE_ONLY) ||
+    String(process.env.SOFTOTECH_BOOT_MODE || '').trim().toLowerCase() === 'firestore';
+}
+
+function incidentOilEnabled() {
+  return process.env.YENKASA_SERVER_INCIDENT_OIL_ENABLED !== 'false' && !firestoreProjectManagementBoot();
+}
+
 function parseEnabledLevels() {
   const configured = String(process.env.YENKASA_SERVER_LOG_OIL_LEVELS || '')
     .split(',')
@@ -51,7 +65,7 @@ function shouldSkipMessage(message) {
 }
 
 function publishServerIncident({ level, incidentType, args = [], sourceFile = 'src/server.js' }) {
-  if (process.env.YENKASA_SERVER_INCIDENT_OIL_ENABLED === 'false') return;
+  if (!incidentOilEnabled()) return;
 
   const message = buildMessage(args);
   if (!message || shouldSkipMessage(message)) return;
@@ -130,11 +144,20 @@ function installServerIncidentOilBridge() {
     return {
       installed: true,
       duplicateInstall: true,
-      enabled: process.env.YENKASA_SERVER_INCIDENT_OIL_ENABLED !== 'false',
+      enabled: incidentOilEnabled(),
     };
   }
 
   installed = true;
+  if (!incidentOilEnabled()) {
+    return {
+      installed: false,
+      duplicateInstall: false,
+      enabled: false,
+      reason: 'disabled_for_firestore_project_management_boot',
+    };
+  }
+
   const enabledLevels = parseEnabledLevels();
   patchConsole('error', enabledLevels);
   patchConsole('warn', enabledLevels);
@@ -145,7 +168,7 @@ function installServerIncidentOilBridge() {
   return {
     installed: true,
     duplicateInstall: false,
-    enabled: process.env.YENKASA_SERVER_INCIDENT_OIL_ENABLED !== 'false',
+    enabled: incidentOilEnabled(),
     capturedConsoleLevels: Array.from(enabledLevels),
   };
 }

@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Engineering Performance Dashboard | Yenkasa Soft-O-Tech</title>
+  <meta name="description" content="Engineering performance dashboard for project progress, configured repositories, code quality, tests, bugs, build health and developer performance." />
+  <link rel="canonical" href="https://www.yenkasa.xyz/engineering-dashboard" />
+  <link rel="stylesheet" href="/project-management-site/engineering-dashboard.css" />
+</head>
+<body class="engineering-dashboard-page">
+  <header class="topbar">
+    <div class="container nav">
+      <a class="brand" href="/" aria-label="Yenkasa Soft-O-Tech home">
+        <img src="/images/logoYenkasaSoftOTechEmblem-512.jpeg" alt="Yenkasa Soft-O-Tech logo" />
+        <span>Yenkasa<span>Soft-O-Tech</span></span>
+      </a>
+      <nav class="navlinks" aria-label="Engineering dashboard navigation">
+        <a href="/">Portfolio</a>
+        <a href="/client/dashboard">Client Dashboard</a>
+        <a href="/admin">Admin</a>
+        <a href="/portfolio-admin">Portfolio Admin</a>
+        <a class="nav-cta" href="/request-project">Request Software</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="eng-dashboard">
+    <section class="eng-hero-section">
+      <div class="container eng-hero">
+        <div class="eng-hero-copy">
+          <p class="eng-eyebrow">Project Management Console</p>
+          <h1>Engineering Performance Dashboard</h1>
+          <p class="eng-lead">Monitor delivery health after projects and repositories are configured from the Admin GitHub Activity page.</p>
+          <div class="eng-project-meta" aria-label="Project summary">
+            <span>Project: <strong>Select in Admin</strong></span>
+            <span>Repository: <strong>Configure per project</strong></span>
+            <span>Tracking: <strong>Project repositories only</strong></span>
+          </div>
+        </div>
+
+        <aside class="eng-health-panel" aria-label="Overall project health">
+          <div class="eng-ring" style="--value: 0;">
+            <span>0%</span>
+          </div>
+          <div>
+            <p>Overall Project Progress</p>
+            <strong>Build Status: Not synced</strong>
+            <span>Code Quality Score: Not synced</span>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="eng-section">
+      <div class="container">
+        <div class="eng-section-head">
+          <div>
+            <p class="section-kicker">Project Quality Overview</p>
+            <h2>Live delivery indicators for managers and team leads.</h2>
+          </div>
+          <p class="muted">The KPI cards keep the project status visible before a manager opens deeper developer, task, quality or bug reports.</p>
+        </div>
+
+        <div class="eng-kpi-grid">
+          <article class="eng-kpi-card"><span>Progress</span><strong>0%</strong><p>Project not selected</p></article>
+          <article class="eng-kpi-card"><span>Quality</span><strong>0%</strong><p>No code-quality sync</p></article>
+          <article class="eng-kpi-card"><span>Test Pass</span><strong>0%</strong><p>No test sync</p></article>
+          <article class="eng-kpi-card"><span>Open Bugs</span><strong>0</strong><p>No bug sync</p></article>
+          <article class="eng-kpi-card"><span>Commits</span><strong>0</strong><p>No repository synced</p></article>
+          <article class="eng-kpi-card"><span>Pull Req.</span><strong>0</strong><p>No repository synced</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="eng-section eng-section-soft">
+      <div class="container">
+        <div class="eng-section-head">
+          <div>
+            <p class="section-kicker">Team Leaderboard</p>
+            <h2>Team Engineering Performance</h2>
+          </div>
+          <div class="eng-legend" aria-label="Color legend">
+            <span><i class="status-dot good"></i>Excellent</span>
+            <span><i class="status-dot warn"></i>Moderate</span>
+            <span><i class="status-dot danger"></i>Needs Attention</span>
+          </div>
+        </div>
+
+        <div class="eng-table-wrap">
+          <table class="eng-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Progress</th>
+                <th>Quality</th>
+                <th>Tests</th>
+                <th>Bugs</th>
+                <th>Commits</th>
+                <th>Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Elorm Wisdom</strong><span>Backend Engineer</span></td>
+                <td><span class="metric-chip good">90%</span></td>
+                <td>92%</td>
+                <td>95%</td>
+                <td>1</td>
+                <td>45</td>
+                <td><strong>91%</strong></td>
+              </tr>
+              <tr>
+                <td><strong>Hudson</strong><span>Frontend Engineer</span></td>
+                <td><span class="metric-chip good">85%</span></td>
+                <td>88%</td>
+                <td>91%</td>
+                <td>2</td>
+                <td>38</td>
+                <td><strong>87%</strong></td>
+              </tr>
+              <tr>
+                <td><strong>Prince</strong><span>Full Stack Engineer</span></td>
+                <td><span class="metric-chip warn">70%</span></td>
+                <td>80%</td>
+                <td>85%</td>
+                <td>5</td>
+                <td>22</td>
+                <td><strong>78%</strong></td>
+              </tr>
+              <tr>
+                <td><strong>Joana</strong><span>Project Manager</span></td>
+                <td><span class="metric-chip good">100%</span></td>
+                <td>N/A</td>
+                <td>N/A</td>
+                <td>0</td>
+                <td>N/A</td>
+                <td><strong>PM</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="eng-section">
+      <div class="container">
+        <div class="eng-section-head">
+          <div>
+            <p class="section-kicker">Developer Cards</p>
+            <h2>Individual engineering performance snapshots.</h2>
+          </div>
+          <p class="muted">Each card is ready to become a clickable profile entry with tasks, commits, pull requests, quality results and activity history.</p>
+        </div>
+
+        <div class="eng-dev-grid">
+          <article class="eng-dev-card">
+            <div class="eng-dev-top">
+              <div class="eng-avatar">EW</div>
+              <div><h3>Elorm Wisdom</h3><p>Backend Engineer</p></div>
+              <span class="score-pill good">91%</span>
+            </div>
+            <dl class="eng-metric-list">
+              <div><dt>Assigned Tasks</dt><dd>12</dd></div>
+              <div><dt>Completed Tasks</dt><dd>10</dd></div>
+              <div><dt>Completion</dt><dd>83%</dd></div>
+              <div><dt>Code Quality</dt><dd>92%</dd></div>
+              <div><dt>Tests Passed</dt><dd>95%</dd></div>
+              <div><dt>Build Success</dt><dd>100%</dd></div>
+              <div><dt>Open Bugs</dt><dd>1</dd></div>
+              <div><dt>GitHub Commits</dt><dd>45</dd></div>
+              <div><dt>Pull Requests</dt><dd>14</dd></div>
+              <div><dt>Files Modified</dt><dd>32</dd></div>
+            </dl>
+            <p class="eng-last-active">Last activity: 2 hours ago</p>
+          </article>
+
+          <article class="eng-dev-card">
+            <div class="eng-dev-top">
+              <div class="eng-avatar">HD</div>
+              <div><h3>Hudson</h3><p>Frontend Engineer</p></div>
+              <span class="score-pill good">87%</span>
+            </div>
+            <dl class="eng-metric-list">
+              <div><dt>Assigned Tasks</dt><dd>11</dd></div>
+              <div><dt>Completed Tasks</dt><dd>9</dd></div>
+              <div><dt>Completion</dt><dd>82%</dd></div>
+              <div><dt>Code Quality</dt><dd>88%</dd></div>
+              <div><dt>Tests Passed</dt><dd>91%</dd></div>
+              <div><dt>Build Success</dt><dd>96%</dd></div>
+              <div><dt>Open Bugs</dt><dd>2</dd></div>
+              <div><dt>GitHub Commits</dt><dd>38</dd></div>
+              <div><dt>Pull Requests</dt><dd>11</dd></div>
+              <div><dt>Files Modified</dt><dd>28</dd></div>
+            </dl>
+            <p class="eng-last-active">Last activity: 4 hours ago</p>
+          </article>
+
+          <article class="eng-dev-card">
+            <div class="eng-dev-top">
+              <div class="eng-avatar warn">PC</div>
+              <div><h3>Prince</h3><p>Full Stack Engineer</p></div>
+              <span class="score-pill warn">78%</span>
+            </div>
+            <dl class="eng-metric-list">
+              <div><dt>Assigned Tasks</dt><dd>10</dd></div>
+              <div><dt>Completed Tasks</dt><dd>7</dd></div>
+              <div><dt>Completion</dt><dd>70%</dd></div>
+              <div><dt>Code Quality</dt><dd>80%</dd></div>
+              <div><dt>Tests Passed</dt><dd>85%</dd></div>
+              <div><dt>Build Success</dt><dd>91%</dd></div>
+              <div><dt>Open Bugs</dt><dd>5</dd></div>
+              <div><dt>GitHub Commits</dt><dd>22</dd></div>
+              <div><dt>Pull Requests</dt><dd>7</dd></div>
+              <div><dt>Files Modified</dt><dd>19</dd></div>
+            </dl>
+            <p class="eng-last-active">Last activity: yesterday</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="eng-section eng-section-soft">
+      <div class="container eng-two-column">
+        <article class="eng-panel">
+          <div class="eng-panel-head">
+            <p class="section-kicker">Task Progress Analysis</p>
+            <h2>Developer Tasks</h2>
+          </div>
+          <div class="task-card">
+            <div>
+              <p class="task-label">Task</p>
+              <h3>Login Backend</h3>
+              <span>Assigned to Elorm Wisdom</span>
+            </div>
+            <div class="progress-row">
+              <span>Progress</span>
+              <strong>80%</strong>
+            </div>
+            <div class="progress-track"><span style="width:80%"></span></div>
+            <ul class="milestone-list">
+              <li class="done">Login Endpoint</li>
+              <li class="done">Password Validation</li>
+              <li class="done">JWT Authentication</li>
+              <li class="done">Refresh Token</li>
+              <li>Documentation</li>
+            </ul>
+            <div class="task-stats">
+              <span>Commits <strong>6</strong></span>
+              <span>Tests <strong>18 / 20</strong></span>
+              <span>Bugs <strong>1 Open</strong></span>
+              <span>Quality <strong>91%</strong></span>
+            </div>
+          </div>
+        </article>
+
+        <article class="eng-panel">
+          <div class="eng-panel-head">
+            <p class="section-kicker">Code Quality Analysis</p>
+            <h2>Quality Analytics</h2>
+          </div>
+          <div class="quality-stack">
+            <div><span>ESLint</span><strong>Not synced</strong><p>Configure repository tracking first</p></div>
+            <div><span>Tests</span><strong>Not synced</strong><p>Sync connected repositories first</p></div>
+            <div><span>GitHub Actions</span><strong>Not synced</strong><p>Sync connected repositories first</p></div>
+            <div><span>Security Scan</span><strong>Not synced</strong><p>Attach a scanner result source</p></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="eng-section">
+      <div class="container eng-three-column">
+        <article class="eng-panel">
+          <div class="eng-panel-head">
+            <p class="section-kicker">GitHub Activity</p>
+            <h2>Activity Feed</h2>
+          </div>
+          <ol class="activity-feed">
+            <li><time>--</time><strong>No repository synced</strong><span>Open Admin -> GitHub Activity to connect GitHub and map repositories.</span><small>Project repository mapping required</small></li>
+          </ol>
+        </article>
+
+        <article class="eng-panel">
+          <div class="eng-panel-head">
+            <p class="section-kicker">Bug Analytics</p>
+            <h2>Bug Health</h2>
+          </div>
+          <div class="bug-grid">
+            <span>Critical <strong>0</strong></span>
+            <span>High <strong>0</strong></span>
+            <span>Medium <strong>0</strong></span>
+            <span>Low <strong>0</strong></span>
+            <span>Resolved <strong>0</strong></span>
+            <span>Open <strong>0</strong></span>
+          </div>
+          <div class="trend-chart" aria-label="Open bugs trend for the last 7 days">
+            <i style="height:52%"></i><i style="height:66%"></i><i style="height:58%"></i><i style="height:44%"></i><i style="height:48%"></i><i style="height:38%"></i><i style="height:34%"></i>
+          </div>
+        </article>
+
+        <article class="eng-panel">
+          <div class="eng-panel-head">
+            <p class="section-kicker">Score Formula</p>
+            <h2>Engineering Score</h2>
+          </div>
+          <div class="formula-list">
+            <span><strong>40%</strong> Task Completion</span>
+            <span><strong>20%</strong> Test Success Rate</span>
+            <span><strong>15%</strong> Code Quality</span>
+            <span><strong>10%</strong> Build Success</span>
+            <span><strong>10%</strong> Bug Resolution</span>
+            <span><strong>5%</strong> Project GitHub Activity</span>
+          </div>
+          <div class="final-score">
+            <span>Final Score</span>
+            <strong>N/A</strong>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="eng-section eng-section-soft">
+      <div class="container">
+        <div class="eng-section-head">
+          <div>
+            <p class="section-kicker">Developer Profile</p>
+            <h2>Individual profile workspace.</h2>
+          </div>
+          <p class="muted">Profile tabs are laid out for future data binding from project records, GitHub, test reports and quality scanners.</p>
+        </div>
+        <div class="profile-tabs" aria-label="Developer profile tabs">
+          <span class="active">Overview</span>
+          <span>Tasks</span>
+          <span>Commits</span>
+          <span>Pull Requests</span>
+          <span>Quality</span>
+          <span>Tests</span>
+          <span>Bugs</span>
+          <span>Activity Timeline</span>
+          <span>Achievements</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="eng-section">
+      <div class="container">
+        <div class="eng-section-head">
+          <div>
+            <p class="section-kicker">Admin Actions</p>
+            <h2>Project manager controls.</h2>
+          </div>
+          <p class="muted">These controls are prepared for the next backend integration step.</p>
+        </div>
+        <div class="admin-actions-grid">
+          <a href="/admin?panel=assignments">Assign Tasks</a>
+          <a href="/admin?panel=assignments">Reassign Tasks</a>
+          <a href="/admin?panel=github-activity">Review Pull Requests</a>
+          <a href="/admin?panel=github-activity">View GitHub Activity</a>
+          <a href="/admin?panel=code-quality">View Quality Reports</a>
+          <a href="/admin?panel=team-performance">View Team Rankings</a>
+          <a href="/admin?panel=reports">Export Performance Reports</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <span>&copy; 2026 Yenkasa Soft-O-Tech.</span>
+      <span>Engineering Performance Dashboard</span>
+    </div>
+  </footer>
+</body>
+</html>

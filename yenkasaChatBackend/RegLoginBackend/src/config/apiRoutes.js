@@ -41,12 +41,12 @@ const API_ROUTE_MOUNTS = [
   ['/api/notifications', 'routes/notifications.routes'],
   ['/api/updates', 'routes/updates.routes'],
   ['/api/announcements', 'routes/announcement.routes'],
-  ['/api/portfolio', 'potfolioBackend/routes/portfolioMedia.routes'],
+  ['/api/portfolio', 'softotechBackend/portfolio/routes/portfolioMedia.routes'],
   ['/api/media-proxy', 'routes/mediaProxy.routes'],
   ['/api/user-privacy', 'routes/userPrivacy.routes'],
   ['/api/metrics', 'routes/metrics.routes'],
-  ['/api/project-requests', 'routes/projectRequest.routes'],
-  ['/api/project-portal', 'routes/softOTechPortal.routes'],
+  ['/api/project-requests', 'softotechBackend/projectManagement/routes/projectRequest.routes'],
+  ['/api/project-portal', 'softotechBackend/projectManagement/routes/softOTechPortal.routes'],
   ['/api/events', 'routes/events.routes'],
   ['/api/live', 'routes/live.routes'],
   ['/api/livestream', 'routes/livestream.routes'],
@@ -55,8 +55,8 @@ const API_ROUTE_MOUNTS = [
   ['/api', 'routes/accountDeletion.routes'],
   ['/api', 'routes/moderation.routes'],
   ['/', 'routes/moderation.page'],
-  ['/', 'routes/projectRequest.page'],
-  ['/', 'routes/softOTechPortal.page'],
+  ['/', 'softotechBackend/projectManagement/routes/projectRequest.page'],
+  ['/', 'softotechBackend/projectManagement/routes/softOTechPortal.page'],
 ];
 
 function safeMount(app, rootDir, routePath, modulePath) {

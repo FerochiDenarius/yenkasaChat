@@ -12,15 +12,15 @@ const User = require('../models/user.model'); // Ensure path is correct
 // but it's okay for its original purpose. The V6 logs will use fresh timestamps.
 const controllerTag = `[CHANGE_PWD_CONTROLLER_ORIGINAL_TAG - ${new Date().toISOString()}]`;
 
-// --- Nodemailer Transporter Configuration (Consolidated) ---
-// (No changes needed here, but ensure it's robust)
+// --- Email provider configuration ---
 const requiredSmtpVars = ['SMTP_HOST', 'SMTP_PORT', 'EMAIL_USER', 'EMAIL_PASS'];
-for (const varName of requiredSmtpVars) {
-    if (!process.env[varName]) {
-        console.error(`<<<<< CONTROLLER V6 - ${controllerTag} FATAL ERROR: Missing required SMTP environment variable: ${varName}. Email functionality will be disabled. >>>>>`);
-    }
+const smtpConfigured = requiredSmtpVars.every((varName) => Boolean(process.env[varName]));
+const resendConfigured = Boolean(process.env.RESEND_API_KEY);
+
+if (!resendConfigured && !smtpConfigured) {
+    console.error(`<<<<< CONTROLLER V6 - ${controllerTag} FATAL ERROR: No password reset email provider configured. Set RESEND_API_KEY or SMTP_HOST/SMTP_PORT/EMAIL_USER/EMAIL_PASS. >>>>>`);
 }
-const transporter = nodemailer.createTransport({
+const transporter = smtpConfigured ? nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT || '587', 10),
     secure: process.env.SMTP_SECURE === 'true',
@@ -28,7 +28,58 @@ const transporter = nodemailer.createTransport({
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
     },
-});
+}) : null;
+
+const resetRequestSuccessMessage = 'If an account with that email exists, a password reset link has been sent.';
+
+async function sendPasswordResetEmail({ to, username, resetUrl }) {
+    const from = process.env.EMAIL_FROM || `"YenkasaChat Support" <${process.env.EMAIL_USER || 'no.reply@yenkasa.xyz'}>`;
+    const subject = "YenkasaChat Password Reset Request";
+    const html = `<p>Hello ${username || 'YenkasaChat User'},</p><p>You requested a password reset.</p><p><a href="${resetUrl}">Reset Your Password</a></p><p>${resetUrl}</p><p>If you did not request this, you can ignore this email.</p><p>Thanks,<br/>The YenkasaChat Team</p>`;
+    const text = `Hello ${username || 'YenkasaChat User'},\n\nYou requested a password reset.\n${resetUrl}\n\nIf you did not request this, you can ignore this email.\n\nThanks,\nThe YenkasaChat Team`;
+
+    if (resendConfigured) {
+        const response = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                from,
+                to,
+                subject,
+                html,
+                text,
+            }),
+        });
+
+        if (!response.ok) {
+            const responseText = await response.text();
+            const error = new Error(`Resend email failed with status ${response.status}`);
+            error.code = 'resend_send_failed';
+            error.status = response.status;
+            error.response = responseText;
+            throw error;
+        }
+
+        return response.json();
+    }
+
+    if (!transporter) {
+        const error = new Error('No password reset email provider is configured.');
+        error.code = 'email_provider_not_configured';
+        throw error;
+    }
+
+    return transporter.sendMail({
+        from,
+        to,
+        subject,
+        html,
+        text,
+    });
+}
 
 
 // --- Functions ---
@@ -54,6 +105,11 @@ const requestPasswordReset = async (req, res, next) => { // Added next for consi
         return res.status(500).json({ message: 'Server configuration error. Unable to process password reset.' });
     }
 
+    if (!resendConfigured && !smtpConfigured) {
+        console.error(`[CHANGE_PWD_CONTROLLER - ${currentOriginalTimestamp}] FATAL ERROR: No password reset email provider is configured. Missing SMTP vars: ${requiredSmtpVars.filter((varName) => !process.env[varName]).join(', ') || 'none'}`);
+        return res.status(500).json({ message: 'Server email configuration error. Unable to send password reset email.' });
+    }
+
     try {
         const lowerCaseEmail = email.toLowerCase().trim();
         const user = await User.findOne({ email: lowerCaseEmail });
@@ -61,7 +117,7 @@ const requestPasswordReset = async (req, res, next) => { // Added next for consi
         if (!user) {
             console.log(`[CHANGE_PWD_CONTROLLER - ${currentOriginalTimestamp}] User with email "${lowerCaseEmail}" not found. Sending generic response for security.`);
             return res.status(200).json({
-                message: 'If an account with that email exists, a password reset link has been sent.',
+                message: resetRequestSuccessMessage,
             });
         }
 
@@ -73,18 +129,30 @@ const requestPasswordReset = async (req, res, next) => { // Added next for consi
         console.log(`[CHANGE_PWD_CONTROLLER - ${currentOriginalTimestamp}] Hashed reset token generated and user "${user.username || user._id}" saved to DB.`);
 
         const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${plainResetToken}`;
-        console.log(`[CHANGE_PWD_CONTROLLER - ${currentOriginalTimestamp}] Constructed reset URL: ${resetUrl}`);
+        console.log(`[CHANGE_PWD_CONTROLLER - ${currentOriginalTimestamp}] Constructed password reset URL for frontend origin: ${process.env.FRONTEND_URL}`);
 
-        await transporter.sendMail({
-            from: process.env.EMAIL_FROM || `"YenkasaChat Support" <${process.env.EMAIL_USER}>`,
-            to: user.email,
-            subject: "YenkasaChat Password Reset Request",
-            html: `<p>Hello ${user.username || 'YenkasaChat User'},</p><p>You requested a password reset...</p><p><a href="${resetUrl}">Reset Your Password</a></p><p>${resetUrl}</p><p>If you did not request...</p><p>Thanks,<br/>The YenkasaChat Team</p>`,
-            text: `Hello ${user.username || 'YenkasaChat User'},\n\nYou requested a password reset...\n${resetUrl}\n\nIf you did not request...\n\nThanks,\nThe YenkasaChat Team`
-        });
+        try {
+            await sendPasswordResetEmail({
+                to: user.email,
+                username: user.username,
+                resetUrl,
+            });
+        } catch (mailError) {
+            user.passwordResetToken = undefined;
+            user.passwordResetExpires = undefined;
+            await user.save();
+            console.error(`[CHANGE_PWD_CONTROLLER - ${currentOriginalTimestamp}] Password reset email delivery failed; reset token cleared for user "${user.username || user._id}".`, {
+                code: mailError?.code || null,
+                command: mailError?.command || null,
+                responseCode: mailError?.responseCode || null,
+                response: mailError?.response || null,
+                message: mailError?.message || 'Unknown email delivery error',
+            });
+            throw mailError;
+        }
 
         console.log(`[CHANGE_PWD_CONTROLLER - ${currentOriginalTimestamp}] Password reset email sent successfully to: ${user.email}.`);
-        res.status(200).json({ message: 'If an account with that email exists, a password reset link has been sent.' });
+        res.status(200).json({ message: resetRequestSuccessMessage });
 
     } catch (err) {
         console.error(`[CHANGE_PWD_CONTROLLER - ${currentOriginalTimestamp}] Error in requestPasswordReset for ${email}:`, err);

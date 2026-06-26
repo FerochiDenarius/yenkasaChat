@@ -2,6 +2,7 @@ package xyz.yenkasa.app.network
 
 import android.content.Context
 import com.google.gson.GsonBuilder
+import xyz.yenkasa.app.model.Role
 import xyz.yenkasa.app.model.UserBasic
 import xyz.yenkasa.app.model.RefreshTokenRequest
 import xyz.yenkasa.app.util.TokenManager
@@ -15,7 +16,7 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 object ApiClient {
-    const val BASE_URL = "https://yenkasa-8rjea.ondigitalocean.app/api/"
+    const val BASE_URL = "https://www.yenkasa.xyz/api/"
 
     private lateinit var retrofit: Retrofit
     private lateinit var uploadRetrofit: Retrofit
@@ -23,6 +24,7 @@ object ApiClient {
     private val gson by lazy {
         GsonBuilder()
             .registerTypeAdapter(UserBasic::class.java, UserBasicJsonAdapter())
+            .registerTypeAdapter(Role::class.java, RoleJsonAdapter())
             .create()
     }
 

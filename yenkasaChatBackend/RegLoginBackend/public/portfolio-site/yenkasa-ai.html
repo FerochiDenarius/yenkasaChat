@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YenkasaAI | Repository and Operational Intelligence</title>
+  <meta name="description" content="YenkasaAI is a cloud-native engineering and operational intelligence platform with repository scanning, exact file retrieval, branch awareness, MongoDB Vector Search, and Gemini reasoning." />
+  <link rel="stylesheet" href="/portfolio-site/yenkasa-ai-showcase.css" />
+</head>
+<body class="ai-showcase">
+  <header class="ai-nav">
+    <div class="ai-container ai-nav-inner">
+      <a class="ai-brand" href="/">
+        <span class="ai-brand-mark">Y</span>
+        <span>YenkasaAI<span>Operational central intelligence</span></span>
+      </a>
+      <nav class="ai-nav-links">
+        <a href="#capabilities">Capabilities</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#gallery">Gallery</a>
+        <a href="/ai" class="ai-nav-cta">Try YenkasaAI</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="ai-hero">
+      <div class="ai-container ai-hero-grid">
+        <div>
+          <p class="ai-kicker">Live AI SaaS platform</p>
+          <h1>Repository intelligence for teams that need answers from real code.</h1>
+          <p class="ai-lead">YenkasaAI connects repository scanning, branch-aware metadata, exact file retrieval, MongoDB Atlas Vector Search, operational event intelligence, and Gemini reasoning into one engineering assistant.</p>
+          <div class="ai-actions">
+            <a class="ai-btn primary" href="/ai">Try YenkasaAI</a>
+            <a class="ai-btn light" href="#gallery">View demos</a>
+            <a class="ai-btn ghost" href="/request-project">Partner with us</a>
+          </div>
+        </div>
+        <aside class="ai-terminal">
+          <div class="ai-terminal-bar"><span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span></div>
+          <div class="ai-terminal-body">
+            <p><strong>User</strong> Fetch routes/messages.routes.js in yenkasaChat</p>
+            <p><strong>YenkasaAI</strong> Repository: yenkasaChat<br />Branch: audit-recovery-state<br />File found: yenkasaChatBackend/RegLoginBackend/routes/messages.routes.js<br />Lines: 682</p>
+            <p><strong>Routing</strong> exact file reader -> MongoDB chunks -> engineering response</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="ai-stat-strip" aria-label="Current production repository index">
+      <div class="ai-stat"><strong>13</strong><span>Indexed repositories</span></div>
+      <div class="ai-stat"><strong>2,516</strong><span>Searchable source files</span></div>
+      <div class="ai-stat"><strong>7,195</strong><span>Repository chunks</span></div>
+      <div class="ai-stat"><strong>30 min</strong><span>GitHub sync interval</span></div>
+    </section>
+
+    <section class="ai-section" id="capabilities">
+      <div class="ai-container">
+        <div class="ai-section-head">
+          <div>
+            <p class="ai-kicker">Capabilities</p>
+            <h2>Built as an engineering platform, not a generic chatbot.</h2>
+          </div>
+          <p class="ai-muted">Repository questions route through a Repository Intelligence Layer first. Vector search is a fallback, not the default for exact file or branch questions.</p>
+        </div>
+        <div class="ai-grid three">
+          <article class="ai-card"><span class="ai-chip">Repository Intelligence</span><h3>Exact file retrieval</h3><p>Fetches real file contents from indexed chunks when users ask for paths like routes/messages.routes.js, AndroidManifest.xml, or livestreamPermissions.js.</p></article>
+          <article class="ai-card"><span class="ai-chip">Branch Awareness</span><h3>Git metadata</h3><p>Reports indexed branch, commit SHA, scan date, default branch, and sync freshness instead of guessing from stale context.</p></article>
+          <article class="ai-card"><span class="ai-chip">Repository Metadata</span><h3>Inventory and folders</h3><p>Counts indexed repositories, files, chunks, folders, languages, and repository coverage directly from MongoDB metadata.</p></article>
+          <article class="ai-card"><span class="ai-chip">Engineering Intelligence</span><h3>Code explanation and audits</h3><p>Reads exact files before asking Gemini to explain logic, identify risks, review bugs, and suggest targeted fixes.</p></article>
+          <article class="ai-card"><span class="ai-chip">Symbol Search</span><h3>Definitions and usages</h3><p>Locates functions, route handlers, services, constants, and implementation points such as canStartLivestream or sendNotification.</p></article>
+          <article class="ai-card"><span class="ai-chip">Operational Intelligence</span><h3>Incidents and events</h3><p>Ingests platform events, logs, incident signals, usage activity, and operational milestones for health reporting and root cause analysis.</p></article>
+          <article class="ai-card"><span class="ai-chip">AI Runtime</span><h3>Multi-agent orchestration</h3><p>Coordinates repository intelligence, vector search, operational context, memory, reasoning, and Gemini responses through FastAPI services.</p></article>
+          <article class="ai-card"><span class="ai-chip">MongoDB Atlas</span><h3>Vector search and chunks</h3><p>Uses MongoDB Atlas for repository chunks, embeddings, sessions, users, operational memory, and vector retrieval.</p></article>
+          <article class="ai-card"><span class="ai-chip">Cloud Native</span><h3>Production infrastructure</h3><p>Runs on Google Cloud Run with Cloud Build, Docker, Secret Manager, Cloud Storage, MongoDB Atlas, and GitHub synchronization.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="ai-section ai-demo-band" id="demo">
+      <div class="ai-container">
+        <div class="ai-section-head">
+          <div>
+            <p class="ai-kicker">Live demo</p>
+            <h2>Click a prompt and test the running system.</h2>
+          </div>
+          <div class="ai-section-actions"><a class="ai-btn light" href="/ai">Launch browser demo</a></div>
+        </div>
+        <div class="ai-prompt-grid">
+          <a class="ai-prompt" href="/ai?prompt=List%20files%20in%20yenkasaChat">List files in yenkasaChat</a>
+          <a class="ai-prompt" href="/ai?prompt=Which%20branch%20are%20you%20indexed%20from%20for%20yenkasaChat%3F">Which branch is indexed?</a>
+          <a class="ai-prompt" href="/ai?prompt=Fetch%20routes%2Fmessages.routes.js%20in%20yenkasaChat">Fetch messages.routes.js</a>
+          <a class="ai-prompt" href="/ai?prompt=Explain%20LiveActivityAdapter.kt">Explain LiveActivityAdapter.kt</a>
+          <a class="ai-prompt" href="/ai?prompt=Audit%20notification%20system%20in%20yenkasaChat">Audit notification system</a>
+          <a class="ai-prompt" href="/ai?prompt=Find%20livestream%20permissions%20in%20yenkasaChat">Find livestream permissions</a>
+          <a class="ai-prompt" href="/ai?prompt=Show%20repository%20health%20for%20AfaPay">Show repository health</a>
+          <a class="ai-prompt" href="/ai?prompt=Explain%20repository%20architecture%20for%20YenkasaAi">Explain repository architecture</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="ai-section" id="architecture">
+      <div class="ai-container">
+        <div class="ai-section-head">
+          <div>
+            <p class="ai-kicker">Architecture</p>
+            <h2>Repository-first reasoning pipeline.</h2>
+          </div>
+          <p class="ai-muted">Exact file and branch questions are answered from repository metadata and chunks before semantic retrieval or Gemini generation is used.</p>
+        </div>
+        <div class="ai-architecture">
+          <div class="ai-flow">
+            <div class="ai-flow-step"><strong>User</strong><span>Browser or macOS app prompt</span></div>
+            <div class="ai-flow-step"><strong>YenkasaAI API</strong><span>FastAPI auth, sessions, tracking</span></div>
+            <div class="ai-flow-step"><strong>Intent Detection</strong><span>File, branch, inventory, symbol, architecture</span></div>
+            <div class="ai-flow-step"><strong>Repository Intelligence</strong><span>Exact resolver before vector search</span></div>
+            <div class="ai-flow-step"><strong>Repository Metadata</strong><span>Branch, commit, file list, scan date</span></div>
+            <div class="ai-flow-step"><strong>MongoDB Atlas</strong><span>Chunks, embeddings, sessions, memory</span></div>
+            <div class="ai-flow-step"><strong>Repository Reasoner</strong><span>Evidence, flow, audit, ranking</span></div>
+            <div class="ai-flow-step"><strong>Gemini</strong><span>Final engineering explanation</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="ai-section">
+      <div class="ai-container">
+        <div class="ai-section-head">
+          <div>
+            <p class="ai-kicker">Why YenkasaAI</p>
+            <h2>It understands repositories as systems.</h2>
+          </div>
+          <p class="ai-muted">Most RAG chatbots retrieve random chunks first. YenkasaAI resolves engineering intent first: branch, repository, file, folder, symbol, dependency, audit, or operational context.</p>
+        </div>
+        <div class="ai-grid two">
+          <article class="ai-card"><h3>Real repository understanding</h3><p>It can list files, fetch complete file contents, explain implementation, and report indexed branch and commit without relying on model memory.</p></article>
+          <article class="ai-card"><h3>Operational central intelligence</h3><p>The same platform tracks logs, app events, incidents, usage, milestones, and recommendations for product operations.</p></article>
+          <article class="ai-card"><h3>Cloud native and investor ready</h3><p>Cloud Run, Cloud Build, MongoDB Atlas Vector Search, Google Cloud Storage, Docker, FastAPI, and secure secrets power the current system.</p></article>
+          <article class="ai-card"><h3>Built for engineering teams</h3><p>Use it for code review, architecture reasoning, bug diagnosis, repository audits, file retrieval, performance analysis, and deployment readiness.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="ai-section" id="gallery">
+      <div class="ai-container">
+        <div class="ai-section-head">
+          <div>
+            <p class="ai-kicker">Demonstration gallery</p>
+            <h2>Current YenkasaAI screenshots and videos.</h2>
+          </div>
+          <p class="ai-muted">Assets are uploaded to Google Cloud Storage and loaded from the production portfolio bucket.</p>
+        </div>
+        <h3>Screenshots</h3>
+        <div class="ai-gallery" id="screenshotGallery"></div>
+        <h3>Videos</h3>
+        <div class="ai-gallery" id="videoGallery"></div>
+      </div>
+    </section>
+
+    <section class="ai-section">
+      <div class="ai-container">
+        <div class="ai-section-head">
+          <div>
+            <p class="ai-kicker">Technology</p>
+            <h2>Production stack.</h2>
+          </div>
+          <p class="ai-muted">The platform combines Google Cloud infrastructure with MongoDB Atlas and Gemini reasoning.</p>
+        </div>
+        <div class="ai-tech-cloud">
+          <span>Google Cloud Run</span><span>Cloud Build</span><span>Cloud Storage</span><span>Secret Manager</span><span>MongoDB Atlas</span><span>Atlas Vector Search</span><span>FastAPI</span><span>Python</span><span>Docker</span><span>Gemini</span><span>GitHub Sync</span><span>Node.js Portfolio</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="ai-footer">
+    <div class="ai-container ai-footer-inner">
+      <span>YenkasaAI by Yenkasa Soft-O-Tech</span>
+      <span><a href="/">Portfolio</a> · <a href="/ai">Try demo</a> · <a href="/request-project">Contact</a></span>
+    </div>
+  </footer>
+
+  <script src="/portfolio-site/yenkasa-ai-showcase.js"></script>
+</body>
+</html>

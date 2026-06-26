@@ -322,6 +322,22 @@ function shouldCountRelayFailure(error) {
   return !['relay_circuit_open', 'relay_circuit_half_open'].includes(String(error?.code || ''));
 }
 
+function isRelayBackpressureError(error) {
+  return ['relay_circuit_open', 'relay_circuit_half_open'].includes(String(error?.code || ''));
+}
+
+function relayCircuitRetryDelayMs() {
+  if (relayCircuit.state === 'open' && relayCircuit.openUntil > Date.now()) {
+    return Math.max(1000, relayCircuit.openUntil - Date.now());
+  }
+
+  if (relayCircuit.state === 'half_open' && relayCircuit.halfOpenProbeInFlight) {
+    return INITIAL_RETRY_DELAY_MS;
+  }
+
+  return null;
+}
+
 function registerRelayFailure(error, diagnostics = {}) {
   relayCircuit.consecutiveFailures += 1;
   relayCircuit.lastFailureAt = Date.now();
@@ -1043,6 +1059,16 @@ async function flushPendingIntelligenceEvents(limit = FLUSH_BATCH_SIZE) {
 
   flushInFlight = true;
   try {
+    const circuitDelayMs = isRelayCircuitOpen() ? relayCircuitRetryDelayMs() : null;
+    if (circuitDelayMs != null) {
+      scheduleFlush(circuitDelayMs);
+      return {
+        skipped: true,
+        reason: 'relay_circuit_open',
+        nextAttemptInMs: circuitDelayMs,
+      };
+    }
+
     const now = new Date();
     const records = await AIOutboundEvent.find({
       status: { $in: ['pending', 'retrying'] },
@@ -1071,6 +1097,12 @@ async function flushPendingIntelligenceEvents(limit = FLUSH_BATCH_SIZE) {
         record.lastErrorStatus = Number(error.status || 0) || undefined;
         record.nextAttemptAt = new Date(Date.now() + computeRetryDelayMs(record.attemptCount));
         await record.save();
+
+        if (isRelayBackpressureError(error)) {
+          const retryDelayMs = relayCircuitRetryDelayMs() || computeRetryDelayMs(record.attemptCount);
+          scheduleFlush(retryDelayMs);
+          break;
+        }
 
         logRelay('warn', 'Retry delivery failed; event remains queued.', {
           eventId: record.eventId,

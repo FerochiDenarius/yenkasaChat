@@ -335,6 +335,120 @@ section:nth-of-type(even) {
   margin-top: 12px;
 }
 
+.registration-card {
+  display: grid;
+  gap: 14px;
+  margin-top: 24px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.registration-status {
+  width: max-content;
+  margin: 0;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(20, 161, 90, 0.18);
+  color: #baf7d1 !important;
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.registration-card h4 {
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.registration-card dl {
+  display: grid;
+  gap: 8px;
+}
+
+.registration-card dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.registration-card dt {
+  color: #a9bdd8;
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.registration-card dd {
+  color: #fff;
+  font-weight: 900;
+}
+
+.certificate-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: none;
+  padding: 24px;
+}
+
+.certificate-modal.open {
+  display: grid;
+  place-items: center;
+}
+
+.certificate-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(7, 18, 38, 0.74);
+}
+
+.certificate-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(720px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding: 18px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.certificate-dialog-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.certificate-dialog h2 {
+  font-size: clamp(1.4rem, 4vw, 2rem);
+}
+
+.certificate-dialog img {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--soft);
+}
+
+.certificate-close {
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--nav);
+  font-weight: 900;
+  cursor: pointer;
+}
+
 .team-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

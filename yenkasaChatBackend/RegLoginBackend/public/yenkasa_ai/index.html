@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YenkasaAI Demo</title>
+  <meta name="description" content="Try YenkasaAI repository intelligence, operational intelligence, and engineering reasoning in the browser." />
+  <link rel="stylesheet" href="/ai/app.css" />
+</head>
+<body>
+  <main class="shell">
+    <section class="side">
+      <a class="brand" href="/yenkasa-ai">
+        <span class="brand-mark">Y</span>
+        <span><strong>YenkasaAI</strong><small>Engineering intelligence demo</small></span>
+      </a>
+      <div class="status-card">
+        <span class="status-dot"></span>
+        <div>
+          <strong>Live production backend</strong>
+          <p>Repository intelligence is backed by MongoDB Atlas, branch metadata, exact file retrieval, and Gemini reasoning.</p>
+        </div>
+      </div>
+      <div class="prompt-list" id="promptList">
+        <button data-prompt="List files in yenkasaChat">List files in yenkasaChat</button>
+        <button data-prompt="Which branch are you indexed from for yenkasaChat?">Which branch is indexed?</button>
+        <button data-prompt="Fetch routes/messages.routes.js in yenkasaChat">Fetch messages.routes.js</button>
+        <button data-prompt="Explain config/livestreamPermissions.js in yenkasaChat">Explain livestream permissions</button>
+        <button data-prompt="Where is canStartLivestream defined in yenkasaChat?">Find canStartLivestream</button>
+        <button data-prompt="Audit notification system in yenkasaChat">Audit notification system</button>
+        <button data-prompt="Show repository health for AfaPay">Show repository health</button>
+      </div>
+    </section>
+
+    <section class="workspace">
+      <header class="topline">
+        <div>
+          <p class="kicker">Public browser demo</p>
+          <h1>Ask YenkasaAI about real repositories.</h1>
+        </div>
+        <a class="portfolio-link" href="/yenkasa-ai">Showcase</a>
+      </header>
+
+      <section class="auth-panel" id="authPanel">
+        <div>
+          <h2>Start a secure session</h2>
+          <p>Use an existing YenkasaAI account, create a test account, or start a temporary demo session.</p>
+        </div>
+        <form id="authForm" class="auth-form">
+          <input id="fullName" name="fullName" autocomplete="name" placeholder="Full name for registration" />
+          <input id="email" name="email" type="email" autocomplete="email" placeholder="Email address" required />
+          <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Password" required />
+          <div class="auth-actions">
+            <button type="submit" data-mode="login">Login</button>
+            <button type="submit" data-mode="register">Register</button>
+            <button type="button" id="demoSession">Demo session</button>
+          </div>
+        </form>
+        <p class="message" id="authMessage"></p>
+      </section>
+
+      <section class="chat-panel">
+        <div class="messages" id="messages">
+          <article class="message assistant">
+            <strong>YenkasaAI</strong>
+            <p>Choose a prompt or ask for a repository file. Exact file requests are routed through the Repository Intelligence Layer before Gemini is used.</p>
+          </article>
+        </div>
+        <form id="chatForm" class="composer">
+          <textarea id="question" rows="3" placeholder="Fetch routes/messages.routes.js in yenkasaChat"></textarea>
+          <button type="submit">Run</button>
+        </form>
+      </section>
+    </section>
+  </main>
+  <script src="/ai/app.js"></script>
+</body>
+</html>

@@ -21,10 +21,7 @@ function normalizedTarget() {
 
 function shouldProxyHost(req, target) {
   if (String(process.env.SOFTOTECH_PORTAL_PROXY_ENABLED || '').toLowerCase() === 'true') return true;
-  const host = String(req.headers.host || '').toLowerCase();
-  if (!host) return false;
-  if (host.includes(new URL(target).host.toLowerCase())) return false;
-  return host === 'www.yenkasa.xyz' || host === 'yenkasa.xyz';
+  return false;
 }
 
 function shouldProxyPath(req) {

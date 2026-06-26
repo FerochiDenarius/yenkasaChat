@@ -6,7 +6,7 @@
   <title>Yenkasa Soft-O-Tech | Portfolio</title>
   <meta name="description" content="Yenkasa Soft-O-Tech portfolio: Yenkasa App, Yenkasa Store, YenkasaAI, ecosystem, software services, project requests and client portal." />
   <link rel="canonical" href="https://www.yenkasa.xyz/" />
-  <link rel="stylesheet" href="/portfolio.css" />
+  <link rel="stylesheet" href="/portfolio-site/portfolio.css" />
 </head>
 <body>
   <header class="topbar">
@@ -21,6 +21,7 @@
         <a href="/yenkasa-store">Yenkasa Store</a>
         <a href="/yenkasa-ai">YenkasaAI</a>
         <a href="/services">Services</a>
+        <a href="/engineering-dashboard">Engineering Dashboard</a>
         <a href="/client/login">Client Portal</a>
         <a href="/portfolio-admin">Portfolio Admin</a>
         <a class="nav-cta" href="/request-project">Request Software</a>
@@ -96,6 +97,11 @@
               <a class="btn btn-outline" href="/admin">Admin</a>
             </div>
           </article>
+          <article class="card" data-product-card="engineering-dashboard">
+            <h3>Engineering Performance Dashboard</h3>
+            <p>Project progress, developer rankings, code quality, test health, GitHub activity, bug analytics and build status for AFA Pay.</p>
+            <div class="section-actions" style="margin-top:16px"><a class="btn btn-primary" href="/engineering-dashboard">Open Dashboard</a></div>
+          </article>
         </div>
       </div>
     </section>
@@ -115,6 +121,15 @@
             <h3>Yenkasa Soft-O-Tech</h3>
             <p>Yenkasa Soft-O-Tech is the software business and product studio behind the Yenkasa ecosystem. The team builds mobile apps, websites, AI systems, business software, cloud deployments, and client project platforms.</p>
             <p>Current products include Yenkasa App, Yenkasa Store, YenkasaAI, the Yenkasa web experience, and the Soft-O-Tech client operations platform.</p>
+            <div class="registration-card" aria-label="Yenkasa Soft-O-Tech registration details">
+              <p class="registration-status">Registered Company</p>
+              <h4>Yenkasa Soft-O-Tech is officially registered in Ghana.</h4>
+              <dl>
+                <div><dt>Registration No.</dt><dd>BN471751125</dd></div>
+                <div><dt>TIN</dt><dd>P0066433177</dd></div>
+              </dl>
+              <button class="btn btn-light" type="button" data-certificate-open>View Certificate</button>
+            </div>
           </article>
 
           <div class="team-grid">
@@ -169,6 +184,22 @@
                 </dl>
               </div>
             </article>
+
+            <article class="team-card">
+              <div class="team-photo"><img src="/images/default.png" alt="Joana Amoquandoh photo placeholder" /></div>
+              <div class="team-body">
+                <p class="team-role">Project Manager</p>
+                <h3>Joana Amoquandoh</h3>
+                <dl>
+                  <div><dt>Department</dt><dd>Project Management</dd></div>
+                  <div><dt>Status</dt><dd>Active Team Member</dd></div>
+                  <div><dt>Bio</dt><dd>Project manager supporting Yenkasa Soft-O-Tech client delivery and coordination.</dd></div>
+                  <div><dt>Skills</dt><dd>Project coordination, client communication, requirements tracking, delivery support</dd></div>
+                  <div><dt>Field of Study</dt><dd>Computer Science Student, Accra Technical University (ATU).</dd></div>
+                  <div><dt>Major</dt><dd>Project coordination, client communication, requirements tracking, and delivery support.</dd></div>
+                </dl>
+              </div>
+            </article>
           </div>
         </div>
       </div>
@@ -210,6 +241,19 @@
       <span>Portfolio | Software Solutions | Client Operations</span>
     </div>
   </footer>
-  <script src="/portfolio-home.js"></script>
+  <div class="certificate-modal" data-certificate-modal aria-hidden="true">
+    <div class="certificate-modal-backdrop" data-certificate-close></div>
+    <section class="certificate-dialog" role="dialog" aria-modal="true" aria-labelledby="certificateTitle">
+      <div class="certificate-dialog-head">
+        <div>
+          <p class="section-kicker">Company Registration</p>
+          <h2 id="certificateTitle">Yenkasa Soft-O-Tech Certificate</h2>
+        </div>
+        <button class="certificate-close" type="button" data-certificate-close aria-label="Close certificate">Close</button>
+      </div>
+      <img src="/images/yenkasa-softotech-business-certificate.jpg" alt="Yenkasa Soft-O-Tech certificate of registration" loading="lazy" />
+    </section>
+  </div>
+  <script src="/portfolio-site/portfolio-home.js"></script>
 </body>
 </html>

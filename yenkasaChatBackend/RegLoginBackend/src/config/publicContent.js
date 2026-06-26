@@ -31,6 +31,8 @@ function registerPolicyPages(app, rootDir) {
 
 function registerPublicContent(app, rootDir) {
   registerPolicyPages(app, rootDir);
+  const portfolioSiteDir = path.join(rootDir, 'public', 'portfolio-site');
+  const projectManagementSiteDir = path.join(rootDir, 'public', 'project-management-site');
 
   app.get('/yme-inspector', (req, res) => {
     res.redirect(302, '/yme');
@@ -47,20 +49,53 @@ function registerPublicContent(app, rootDir) {
     res.sendFile(path.join(rootDir, 'public', 'images', 'yc.png'));
   });
 
+  app.get('/', (req, res) => {
+    res.sendFile(path.join(portfolioSiteDir, 'index.html'));
+  });
+  app.get('/index.html', (req, res) => {
+    res.sendFile(path.join(portfolioSiteDir, 'index.html'));
+  });
   app.get('/ecosystem', (req, res) => {
-    res.sendFile(path.join(rootDir, 'public', 'ecosystem.html'));
+    res.sendFile(path.join(portfolioSiteDir, 'ecosystem.html'));
+  });
+  app.get('/ecosystem.html', (req, res) => {
+    res.sendFile(path.join(portfolioSiteDir, 'ecosystem.html'));
   });
   app.get('/yenkasa-app', (req, res) => {
-    res.sendFile(path.join(rootDir, 'public', 'yenkasa-app.html'));
+    res.sendFile(path.join(portfolioSiteDir, 'yenkasa-app.html'));
+  });
+  app.get('/yenkasa-app.html', (req, res) => {
+    res.sendFile(path.join(portfolioSiteDir, 'yenkasa-app.html'));
   });
   app.get('/yenkasa-store', (req, res) => {
-    res.sendFile(path.join(rootDir, 'public', 'yenkasa-store.html'));
+    res.sendFile(path.join(portfolioSiteDir, 'yenkasa-store.html'));
+  });
+  app.get('/yenkasa-store.html', (req, res) => {
+    res.sendFile(path.join(portfolioSiteDir, 'yenkasa-store.html'));
   });
   app.get('/yenkasa-ai', (req, res) => {
-    res.sendFile(path.join(rootDir, 'public', 'yenkasa-ai.html'));
+    res.sendFile(path.join(portfolioSiteDir, 'yenkasa-ai.html'));
+  });
+  app.get('/yenkasaai', (req, res) => {
+    res.sendFile(path.join(portfolioSiteDir, 'yenkasa-ai.html'));
+  });
+  app.get('/yenkasa-ai.html', (req, res) => {
+    res.sendFile(path.join(portfolioSiteDir, 'yenkasa-ai.html'));
   });
   app.get('/portfolio-admin', (req, res) => {
-    res.sendFile(path.join(rootDir, 'public', 'admin.html'));
+    res.sendFile(path.join(portfolioSiteDir, 'admin.html'));
+  });
+  app.get('/admin.html', (req, res) => {
+    res.sendFile(path.join(portfolioSiteDir, 'admin.html'));
+  });
+  app.get('/engineering-dashboard', (req, res) => {
+    res.sendFile(path.join(projectManagementSiteDir, 'engineering-dashboard.html'));
+  });
+  app.get('/engineering-dashboard.html', (req, res) => {
+    res.sendFile(path.join(projectManagementSiteDir, 'engineering-dashboard.html'));
+  });
+  app.get(['/portfolio.css', '/portfolio-home.js', '/portfolio-content.js'], (req, res) => {
+    res.redirect(301, `/portfolio-site${req.path}`);
   });
 
   app.get('/.well-known/assetlinks.json', (req, res) => {

@@ -62,14 +62,27 @@ body.ai-showcase a {
   font-weight: 950;
 }
 
-.ai-brand-mark {
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  background: linear-gradient(135deg, var(--blue), var(--green));
+.ai-brand-logo {
+  width: 42px !important;
+  height: 42px !important;
+  max-width: 42px !important;
+  max-height: 42px !important;
+  min-width: 42px;
+  border-radius: 11px;
+  object-fit: cover;
+  flex: 0 0 42px;
+  box-shadow: 0 10px 24px rgba(18, 101, 255, 0.22);
+}
+
+.ai-hero-logo {
+  width: 86px !important;
+  height: 86px !important;
+  max-width: 86px !important;
+  max-height: 86px !important;
+  border-radius: 18px;
+  object-fit: cover;
+  margin-bottom: 18px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
 }
 
 .ai-brand span span {
@@ -342,6 +355,45 @@ body.ai-showcase a {
 .ai-demo-band {
   color: #fff;
   background: linear-gradient(135deg, #081526, #10243c 54%, #0e5a42);
+}
+
+.ai-partner {
+  background:
+    linear-gradient(135deg, rgba(8, 21, 38, 0.94), rgba(14, 90, 66, 0.88)),
+    url("https://storage.googleapis.com/yenkasa-media/portfolio/yenkasa-ai/screenshot-2026-06-26-at-8-58-50-am.jpg") center/cover no-repeat;
+  color: #fff;
+}
+
+.ai-partner .ai-muted {
+  color: #d9e8f6;
+}
+
+.ai-contact-card {
+  min-height: 174px;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.ai-contact-card span {
+  color: #9df1cb;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+}
+
+.ai-contact-card strong {
+  font-size: 1.35rem;
+}
+
+.ai-contact-card small {
+  color: #d9e8f6;
 }
 
 .ai-prompt-grid {

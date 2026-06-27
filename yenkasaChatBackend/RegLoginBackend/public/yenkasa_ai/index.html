@@ -5,15 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>YenkasaAI Demo</title>
   <meta name="description" content="Try YenkasaAI repository intelligence, operational intelligence, and engineering reasoning in the browser." />
-  <link rel="stylesheet" href="/ai/app.css" />
+  <link rel="stylesheet" href="/ai/app.css?v=20260627-1" />
 </head>
 <body>
+  <button class="menu-backdrop" id="menuBackdrop" type="button" aria-label="Close menu"></button>
   <main class="shell">
-    <section class="side">
-      <a class="brand" href="/yenkasa-ai">
-        <span class="brand-mark">Y</span>
-        <span><strong>YenkasaAI</strong><small>Engineering intelligence demo</small></span>
-      </a>
+    <aside class="side" id="sideNav">
+      <div class="side-heading">
+        <a class="brand" href="/yenkasa-ai">
+          <img class="brand-logo" src="/images/yenkasa_ai_logo.png?v=20260626-2" width="42" height="42" alt="YenkasaAI logo" />
+          <span><strong>YenkasaAI</strong><small>Engineering intelligence demo</small></span>
+        </a>
+        <button class="menu-close" id="menuClose" type="button" aria-label="Close menu">×</button>
+      </div>
       <div class="status-card">
         <span class="status-dot"></span>
         <div>
@@ -30,10 +34,12 @@
         <button data-prompt="Audit notification system in yenkasaChat">Audit notification system</button>
         <button data-prompt="Show repository health for AfaPay">Show repository health</button>
       </div>
-    </section>
+      <button class="logout-button" id="logoutButton" type="button">Log out</button>
+    </aside>
 
     <section class="workspace">
       <header class="topline">
+        <button class="menu-toggle" id="menuToggle" type="button" aria-controls="sideNav" aria-expanded="false">Menu</button>
         <div>
           <p class="kicker">Public browser demo</p>
           <h1>Ask YenkasaAI about real repositories.</h1>
@@ -73,6 +79,6 @@
       </section>
     </section>
   </main>
-  <script src="/ai/app.js"></script>
+  <script src="/ai/app.js?v=20260627-1"></script>
 </body>
 </html>

@@ -64,15 +64,18 @@ object ApiClient {
                 val url = originalRequest.url.toString()
                 val requestBuilder = originalRequest.newBuilder()
 
-                // Skip token for reset endpoints
-                if (!url.contains("reset-password/confirm") && !url.contains("reset-password/verify")) {
+                val isPasswordResetRequest = url.contains("reset-password/")
+
+                // Password reset endpoints are public. Do not attach stale auth tokens
+                // and do not trigger refresh-token handling for logged-out users.
+                if (!isPasswordResetRequest) {
                     val token = TokenManager.getToken(applicationContext)
                     token?.let { requestBuilder.header("Authorization", "Bearer $it") }
                 }
 
                 var response = chain.proceed(requestBuilder.build())
 
-                if (response.code == 401 && !url.contains("auth/refresh-token")) {
+                if (response.code == 401 && !url.contains("auth/refresh-token") && !isPasswordResetRequest) {
                     response.close() // Close old response
 
                     val refreshToken = TokenManager.getRefreshToken(applicationContext)

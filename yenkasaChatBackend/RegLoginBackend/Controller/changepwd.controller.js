@@ -32,6 +32,34 @@ const transporter = smtpConfigured ? nodemailer.createTransport({
 
 const resetRequestSuccessMessage = 'If an account with that email exists, a password reset link has been sent.';
 
+function normalizeOrigin(origin) {
+    if (!origin || typeof origin !== 'string') return null;
+
+    const trimmed = origin.trim().replace(/\/+$/, '');
+    if (!/^https?:\/\//i.test(trimmed)) return null;
+
+    try {
+        const parsed = new URL(trimmed);
+        return parsed.origin;
+    } catch {
+        return null;
+    }
+}
+
+function getResetLinkOrigin(req) {
+    const configuredOrigin = normalizeOrigin(
+        process.env.FRONTEND_URL ||
+        process.env.PUBLIC_BASE_URL ||
+        process.env.CLIENT_URL
+    );
+    if (configuredOrigin) return configuredOrigin;
+
+    const forwardedProto = String(req.get('x-forwarded-proto') || '').split(',')[0].trim();
+    const protocol = forwardedProto || req.protocol || 'https';
+    const host = req.get('x-forwarded-host') || req.get('host');
+    return normalizeOrigin(`${protocol}://${host}`) || 'https://www.yenkasa.xyz';
+}
+
 async function sendPasswordResetEmail({ to, username, resetUrl }) {
     const from = process.env.EMAIL_FROM || `"YenkasaChat Support" <${process.env.EMAIL_USER || 'no.reply@yenkasa.xyz'}>`;
     const subject = "YenkasaChat Password Reset Request";
@@ -88,7 +116,6 @@ async function sendPasswordResetEmail({ to, username, resetUrl }) {
 const requestPasswordReset = async (req, res, next) => { // Added next for consistency if routes file passes it
     const currentV6Timestamp = new Date().toISOString();
     console.log(`<<<<< CONTROLLER V6 - HIT requestPasswordReset - Timestamp: ${currentV6Timestamp} >>>>>`);
-    console.log(`<<<<< CONTROLLER V6 - requestPasswordReset - req.body IS: ${JSON.stringify(req.body)} >>>>>`);
 
     const { email } = req.body;
     // Using your original currentTimestamp for your existing logs
@@ -98,11 +125,6 @@ const requestPasswordReset = async (req, res, next) => { // Added next for consi
     if (!email || typeof email !== 'string') {
         console.warn(`[CHANGE_PWD_CONTROLLER - ${currentOriginalTimestamp}] Validation Error: Email not provided or invalid format.`);
         return res.status(400).json({ message: 'Email is required and must be a string.' });
-    }
-
-    if (!process.env.FRONTEND_URL || typeof process.env.FRONTEND_URL !== 'string' || !process.env.FRONTEND_URL.startsWith('http')) {
-        console.error(`[CHANGE_PWD_CONTROLLER - ${currentOriginalTimestamp}] FATAL ERROR: FRONTEND_URL environment variable is missing, invalid, or not an HTTP(S) URL. Value: [${process.env.FRONTEND_URL}]`);
-        return res.status(500).json({ message: 'Server configuration error. Unable to process password reset.' });
     }
 
     if (!resendConfigured && !smtpConfigured) {
@@ -128,8 +150,9 @@ const requestPasswordReset = async (req, res, next) => { // Added next for consi
         await user.save();
         console.log(`[CHANGE_PWD_CONTROLLER - ${currentOriginalTimestamp}] Hashed reset token generated and user "${user.username || user._id}" saved to DB.`);
 
-        const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${plainResetToken}`;
-        console.log(`[CHANGE_PWD_CONTROLLER - ${currentOriginalTimestamp}] Constructed password reset URL for frontend origin: ${process.env.FRONTEND_URL}`);
+        const resetLinkOrigin = getResetLinkOrigin(req);
+        const resetUrl = `${resetLinkOrigin}/reset-password?token=${plainResetToken}`;
+        console.log(`[CHANGE_PWD_CONTROLLER - ${currentOriginalTimestamp}] Constructed password reset URL for frontend origin: ${resetLinkOrigin}`);
 
         try {
             await sendPasswordResetEmail({
@@ -166,7 +189,6 @@ const requestPasswordReset = async (req, res, next) => { // Added next for consi
 const verifyResetToken = async (req, res, next) => {
     const currentV6Timestamp = new Date().toISOString();
     console.log(`<<<<< CONTROLLER V6 - HIT verifyResetToken - Timestamp: ${currentV6Timestamp} >>>>>`);
-    console.log(`<<<<< CONTROLLER V6 - verifyResetToken - req.body IS: ${JSON.stringify(req.body)} >>>>>`);
 
     const { token } = req.body;
     const currentOriginalTimestamp = new Date().toISOString();
@@ -204,8 +226,6 @@ const resetPassword = async (req, res, next) => {
     const currentV6Timestamp = new Date().toISOString(); // For V6 logs
     // V6 LOGS - VERY FIRST THING IN THE FUNCTION
     console.log(`<<<<< CONTROLLER V6 - HIT resetPassword - Timestamp: ${currentV6Timestamp} >>>>>`);
-    console.log("<<<<< CONTROLLER V6 - INSIDE resetPassword (START) - req.params IS: ", JSON.stringify(req.params), ">>>>>");
-    console.log("<<<<< CONTROLLER V6 - INSIDE resetPassword (START) - req.body IS: ", JSON.stringify(req.body), ">>>>>");
 
     const { token } = req.params;
     const { newPassword } = req.body;
@@ -226,8 +246,7 @@ const resetPassword = async (req, res, next) => {
     try {
         console.log(`<<<<< CONTROLLER V6 - resetPassword - Attempting to hash incoming token from path: ${token ? token.substring(0,10)+'...' : 'N/A'} >>>>>`);
         const hashedIncomingToken = crypto.createHash('sha256').update(token).digest('hex');
-        console.log(`<<<<< CONTROLLER V6 - resetPassword - Hashed incoming token: ${hashedIncomingToken} >>>>>`);
-        
+
         const user = await User.findOne({
             passwordResetToken: hashedIncomingToken,
             passwordResetExpires: { $gt: Date.now() }

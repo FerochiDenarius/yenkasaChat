@@ -101,6 +101,7 @@
         }
 
         const token = getQueryParam('token');
+        const appRedirectAttempted = getQueryParam('app_redirect') === 'true';
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
         // Construct the app-specific link
@@ -108,7 +109,7 @@
         // For testing, let's assume it's www.yenkasa.xyz as per our recent discussion.
         // The pathPrefix in the manifest is /reset-password.
         // The App Link URL itself will be an HTTPS URL that the app is registered to handle.
-        const appLinkUrl = `https://www.yenkasa.xyz/reset-password?token=${token}&app_redirect=true`;
+        const appLinkUrl = `https://www.yenkasa.xyz/reset-password?token=${encodeURIComponent(token || '')}&app_redirect=true`;
         // The actual custom scheme, if you had one as a deeper fallback (less common with App Links)
         // const customSchemeUrl = `yenkasachat://reset-password/${token}`;
 
@@ -125,13 +126,14 @@
             // and open the app. If not, the browser will just navigate to this HTTPS URL (which is this page itself,
             // but we can detect that or just let the timeout handle it).
             // We use a slight delay to allow the "Attempting to open" message to show.
-            setTimeout(() => {
-                // On some mobile OS versions, directly setting window.location to an app link
-                // might not work as well as an iframe or a redirect from a server.
-                // However, for pure client-side, this is the most direct attempt.
-                // If App Links are configured, the OS should handle this.
-                window.location.href = appLinkUrl;
-            }, 500);
+            if (isMobile && !appRedirectAttempted) {
+                setTimeout(() => {
+                    // If App Links are configured, the OS should handle this.
+                    // The app_redirect flag prevents this page from endlessly reloading
+                    // when the browser handles the URL instead of the app.
+                    window.location.href = appLinkUrl;
+                }, 500);
+            }
 
 
             // Fallback for if the app doesn't open automatically after a few seconds
@@ -142,7 +144,7 @@
                 } else {
                     desktopInfoSection.classList.remove('hidden');
                 }
-            }, 3500); // Wait 3.5 seconds
+            }, appRedirectAttempted || !isMobile ? 500 : 3500); // Wait for first app-link attempt only
 
         } else {
             loadingSection.innerHTML = '<h1>Error</h1><p>Password reset token not found in the URL. Please use the link from your email.</p>';

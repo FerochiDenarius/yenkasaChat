@@ -48,7 +48,6 @@ console.log("routes/changepwd.routes.js - V6 - Defined POST /verify for verifyRe
 router.post('/confirm/:token', (req, res, next) => {
     console.log(`<<<<< ROUTES V6 - HIT /confirm/:token - Timestamp: ${new Date().toISOString()} >>>>>`);
     console.log("<<<<< ROUTES V6 - INSIDE /confirm/:token ROUTE HANDLER - req.params IS: ", JSON.stringify(req.params), ">>>>>");
-    console.log("<<<<< ROUTES V6 - INSIDE /confirm/:token ROUTE HANDLER - req.body IS: ", JSON.stringify(req.body), ">>>>>");
     if (typeof resetPassword === 'function') {
         resetPassword(req, res, next); // Call the original controller
     } else {

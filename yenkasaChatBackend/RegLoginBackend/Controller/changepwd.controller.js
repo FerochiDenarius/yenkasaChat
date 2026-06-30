@@ -4,7 +4,6 @@ console.log("<<<<< CONTROLLER IS V6 - TOP OF FILE - ", new Date().toISOString(),
 require('dotenv').config(); // Good to have at the top if not already done by server.js
 const bcrypt = require('bcryptjs'); // Assuming you use bcrypt for password hashing
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
 const User = require('../models/user.model'); // Ensure path is correct
 
 // Your existing controllerTag
@@ -13,22 +12,11 @@ const User = require('../models/user.model'); // Ensure path is correct
 const controllerTag = `[CHANGE_PWD_CONTROLLER_ORIGINAL_TAG - ${new Date().toISOString()}]`;
 
 // --- Email provider configuration ---
-const requiredSmtpVars = ['SMTP_HOST', 'SMTP_PORT', 'EMAIL_USER', 'EMAIL_PASS'];
-const smtpConfigured = requiredSmtpVars.every((varName) => Boolean(process.env[varName]));
 const resendConfigured = Boolean(process.env.RESEND_API_KEY);
 
-if (!resendConfigured && !smtpConfigured) {
-    console.error(`<<<<< CONTROLLER V6 - ${controllerTag} FATAL ERROR: No password reset email provider configured. Set RESEND_API_KEY or SMTP_HOST/SMTP_PORT/EMAIL_USER/EMAIL_PASS. >>>>>`);
+if (!resendConfigured) {
+    console.error(`<<<<< CONTROLLER V6 - ${controllerTag} FATAL ERROR: Password reset email provider is not configured. Set RESEND_API_KEY. >>>>>`);
 }
-const transporter = smtpConfigured ? nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '587', 10),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-}) : null;
 
 const resetRequestSuccessMessage = 'If an account with that email exists, a password reset link has been sent.';
 
@@ -61,52 +49,42 @@ function getResetLinkOrigin(req) {
 }
 
 async function sendPasswordResetEmail({ to, username, resetUrl }) {
-    const from = process.env.EMAIL_FROM || `"YenkasaChat Support" <${process.env.EMAIL_USER || 'no.reply@yenkasa.xyz'}>`;
+    const from = process.env.EMAIL_FROM || `"YenkasaChat Support" <no.reply@yenkasa.xyz>`;
     const subject = "YenkasaChat Password Reset Request";
     const html = `<p>Hello ${username || 'YenkasaChat User'},</p><p>You requested a password reset.</p><p><a href="${resetUrl}">Reset Your Password</a></p><p>${resetUrl}</p><p>If you did not request this, you can ignore this email.</p><p>Thanks,<br/>The YenkasaChat Team</p>`;
     const text = `Hello ${username || 'YenkasaChat User'},\n\nYou requested a password reset.\n${resetUrl}\n\nIf you did not request this, you can ignore this email.\n\nThanks,\nThe YenkasaChat Team`;
 
-    if (resendConfigured) {
-        const response = await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                from,
-                to,
-                subject,
-                html,
-                text,
-            }),
-        });
-
-        if (!response.ok) {
-            const responseText = await response.text();
-            const error = new Error(`Resend email failed with status ${response.status}`);
-            error.code = 'resend_send_failed';
-            error.status = response.status;
-            error.response = responseText;
-            throw error;
-        }
-
-        return response.json();
-    }
-
-    if (!transporter) {
-        const error = new Error('No password reset email provider is configured.');
-        error.code = 'email_provider_not_configured';
+    if (!resendConfigured) {
+        const error = new Error('Resend is not configured for password reset email.');
+        error.code = 'resend_not_configured';
         throw error;
     }
 
-    return transporter.sendMail({
-        from,
-        to,
-        subject,
-        html,
-        text,
+    const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            from,
+            to,
+            subject,
+            html,
+            text,
+        }),
     });
+
+    if (!response.ok) {
+        const responseText = await response.text();
+        const error = new Error(`Resend email failed with status ${response.status}`);
+        error.code = 'resend_send_failed';
+        error.status = response.status;
+        error.response = responseText;
+        throw error;
+    }
+
+    return response.json();
 }
 
 
@@ -127,8 +105,8 @@ const requestPasswordReset = async (req, res, next) => { // Added next for consi
         return res.status(400).json({ message: 'Email is required and must be a string.' });
     }
 
-    if (!resendConfigured && !smtpConfigured) {
-        console.error(`[CHANGE_PWD_CONTROLLER - ${currentOriginalTimestamp}] FATAL ERROR: No password reset email provider is configured. Missing SMTP vars: ${requiredSmtpVars.filter((varName) => !process.env[varName]).join(', ') || 'none'}`);
+    if (!resendConfigured) {
+        console.error(`[CHANGE_PWD_CONTROLLER - ${currentOriginalTimestamp}] FATAL ERROR: RESEND_API_KEY is not configured.`);
         return res.status(500).json({ message: 'Server email configuration error. Unable to send password reset email.' });
     }
 

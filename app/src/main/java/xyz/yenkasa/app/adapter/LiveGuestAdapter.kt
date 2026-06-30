@@ -1,6 +1,7 @@
 package xyz.yenkasa.app.adapter
 
 import android.view.LayoutInflater
+import android.view.Gravity
 import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
@@ -50,15 +51,22 @@ class LiveGuestAdapter(
         fun bind(guest: LiveGuest) {
             val isLocalGuest = guest.agoraUid == localUidProvider()
             nameText.text = guest.username
-            Glide.with(avatarImage).load(guest.avatar).placeholder(R.drawable.ic_default_avatar).into(avatarImage)
+            Glide.with(avatarImage)
+                .load(guest.avatar.takeIf { it.isNotBlank() })
+                .placeholder(R.drawable.ic_default_avatar)
+                .error(R.drawable.ic_default_avatar)
+                .circleCrop()
+                .into(avatarImage)
             muteIcon.visibility = if (guest.isMuted && !isHost) View.VISIBLE else View.GONE
 
             if (guest.isVideoStopped) {
                 videoContainer.visibility = View.GONE
                 avatarImage.visibility = View.VISIBLE
+                updateAvatarPosition(center = true)
             } else {
                 videoContainer.visibility = View.VISIBLE
-                avatarImage.visibility = View.GONE
+                avatarImage.visibility = View.VISIBLE
+                updateAvatarPosition(center = false)
                 setupVideo(guest.agoraUid)
             }
 
@@ -86,6 +94,19 @@ class LiveGuestAdapter(
                 itemView.setOnLongClickListener(null)
             }
         }
+
+        private fun updateAvatarPosition(center: Boolean) {
+            val params = avatarImage.layoutParams as FrameLayout.LayoutParams
+            params.gravity = if (center) Gravity.CENTER else Gravity.TOP or Gravity.START
+            params.width = if (center) dp(40) else dp(30)
+            params.height = if (center) dp(40) else dp(30)
+            params.marginStart = if (center) 0 else dp(6)
+            params.topMargin = if (center) 0 else dp(6)
+            avatarImage.layoutParams = params
+        }
+
+        private fun dp(value: Int): Int =
+            (value * itemView.resources.displayMetrics.density).toInt()
 
         private fun setupVideo(uid: Int) {
             if (videoView == null) {

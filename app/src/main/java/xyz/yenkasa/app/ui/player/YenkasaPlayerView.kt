@@ -241,15 +241,17 @@ class YenkasaPlayerView @JvmOverloads constructor(
 
     private fun applyEdgeToEdgeSpacing() {
         ViewCompat.setOnApplyWindowInsetsListener(this) { _, insets ->
-            val safeBars = insets.getInsets(
+            val safeBars = insets.getInsetsIgnoringVisibility(
                 WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
             )
             val side = dp(16)
+            val topGap = dp(if (isCompactWidth()) 12 else 16)
             val controlsSide = dp(20)
             val controlsBottomGap = dp(36)
 
             topBar.updateMargins(
                 start = safeBars.left + side,
+                top = safeBars.top + topGap,
                 end = safeBars.right + side
             )
             searchBar.updateMargins(start = safeBars.left + side)

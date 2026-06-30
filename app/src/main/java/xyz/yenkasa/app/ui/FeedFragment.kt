@@ -99,6 +99,7 @@ class FeedFragment : Fragment() {
     private var isLoading = false
     private var isLoadingMore = false
     private var isLastPage = false
+    private var feedReloadInProgress = false
     private var feedRequestGeneration = 0
     private var activeCacheKey = "default"
     private var lastLoadedPostId: String? = null
@@ -558,6 +559,7 @@ class FeedFragment : Fragment() {
             } else {
                 false
             }
+            feedReloadInProgress = false
             Log.d("FeedFragment", "offline_recovery page=$page cacheKey=$cacheKey loaded=$loaded posts=${posts.size}")
             swipeRefreshFeed.isRefreshing = false
             updateEmptyFeedUi(isRefreshing = posts.isEmpty())
@@ -625,6 +627,7 @@ class FeedFragment : Fragment() {
                         "FeedFragment",
                         "feed_fetch_success mode=${selectedFeedMode.backendKey()} page=$page received=${sourcePosts.size} rendered=${posts.size} hasMore=${!isLastPage} lastLoadedPostId=$lastLoadedPostId durationMs=${System.currentTimeMillis() - requestStartedAt}"
                     )
+                    feedReloadInProgress = false
                     renderPosts()
                     restoreScrollPositionIfNeeded(cacheKey)
                     saveCurrentFeedCache()
@@ -634,6 +637,7 @@ class FeedFragment : Fragment() {
                     } else {
                         false
                     }
+                    feedReloadInProgress = false
                     Log.w("FeedFragment", "feed_fetch_failed code=${response.code()} cacheLoaded=$loaded")
                     updateEmptyFeedUi(isRefreshing = posts.isEmpty())
                 }
@@ -653,6 +657,7 @@ class FeedFragment : Fragment() {
                 if (posts.isEmpty()) {
                     loadCachedFeed(cacheKey, replace = true, allowGlobalFallback = true)
                 }
+                feedReloadInProgress = false
                 updateEmptyFeedUi(isRefreshing = posts.isEmpty())
             }
         })
@@ -785,7 +790,7 @@ class FeedFragment : Fragment() {
             allCommunities,
             selectedCommunities.mapNotNull { it.id }.toSet()
         )
-        updateEmptyFeedUi(isRefreshing = isLoading && posts.isEmpty())
+        updateEmptyFeedUi(isRefreshing = (isLoading || feedReloadInProgress) && posts.isEmpty())
         if (posts.isNotEmpty()) {
             preloadFeedAround(layoutManager.findFirstVisibleItemPosition().coerceAtLeast(0))
             recyclerView.post {
@@ -864,6 +869,7 @@ class FeedFragment : Fragment() {
         feedRequestGeneration++
         isLoading = false
         isLoadingMore = false
+        feedReloadInProgress = true
         currentPage = 1
         isLastPage = false
         playerCoordinator?.resetRenderedState()
@@ -934,9 +940,10 @@ class FeedFragment : Fragment() {
 
     private fun updateEmptyFeedUi(isRefreshing: Boolean) {
         if (!::emptyView.isInitialized) return
-        updatePlayerEmptyRecoveryChrome(posts.isEmpty())
+        val refreshing = isRefreshing || feedReloadInProgress
+        updatePlayerEmptyRecoveryChrome(posts.isEmpty() && !refreshing)
         emptyView.text = when {
-            isRefreshing -> getString(R.string.refreshing_feed)
+            refreshing -> getString(R.string.refreshing_feed)
             selectedCommunities.isNotEmpty() -> getString(R.string.feed_empty_no_posts_in_community)
             else -> getString(R.string.feed_empty_no_posts)
         }

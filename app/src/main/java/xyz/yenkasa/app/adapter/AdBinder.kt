@@ -26,8 +26,6 @@ import xyz.yenkasa.app.yme.YmeAnalyticsManager
 class AdBinder(private val context: Context) : AdAdapterCallbacks {
 
     private val trackedImpressions = mutableSetOf<String>()
-    private val failedMediaUrls = linkedSetOf<String>()
-
     override fun bindYenkasa(holder: YenkasaAdViewHolder, ad: AdModel) {
         Log.d("YenkasaAds", "Binding Yenkasa ad id=${ad._id} image=${ad.imageUrl} video=${ad.videoUrl} thumb=${ad.thumbnailUrl}")
         val imageUrl = usableMediaUrl(ad.imageUrl)
@@ -84,8 +82,8 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
                     ): Boolean {
                         Log.e("YenkasaAds", "Image ad failed id=${ad._id}: ${e?.message}")
                         rememberFailedMediaUrl(imageUrl)
-                        holder.adImageThumbnail.visibility = View.GONE
-                        holder.adMediaFallback.visibility = if (videoUrl == null) View.VISIBLE else View.GONE
+                        holder.adImageThumbnail.visibility = View.VISIBLE
+                        holder.adMediaFallback.visibility = View.GONE
                         return false
                     }
 
@@ -171,16 +169,13 @@ class AdBinder(private val context: Context) : AdAdapterCallbacks {
         if (normalized.isBlank()) return null
         if (normalized.equals("null", ignoreCase = true)) return null
         if (normalized.equals("undefined", ignoreCase = true)) return null
-        return normalized.takeUnless { failedMediaUrls.contains(it) }
+        return normalized
     }
 
     private fun rememberFailedMediaUrl(value: String?) {
         val normalized = value?.trim().orEmpty()
-        if (normalized.isBlank()) return
-        failedMediaUrls.add(normalized)
-        while (failedMediaUrls.size > 100) {
-            val oldest = failedMediaUrls.firstOrNull() ?: break
-            failedMediaUrls.remove(oldest)
+        if (normalized.isNotBlank()) {
+            Log.w("YenkasaAds", "Transient media load failure; will retry on next bind: $normalized")
         }
     }
 

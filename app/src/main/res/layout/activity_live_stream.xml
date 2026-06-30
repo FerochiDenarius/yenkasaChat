@@ -253,7 +253,8 @@
 
         <LinearLayout
             android:id="@+id/containerLiveRequestSeat"
-            style="@style/LiveActionRailItem">
+            style="@style/LiveActionRailItem"
+            android:visibility="gone">
 
             <ImageButton
                 android:id="@+id/buttonRequestLiveSeat"
@@ -361,7 +362,8 @@
 
         <LinearLayout
             android:id="@+id/containerLiveReport"
-            style="@style/LiveActionRailItem">
+            style="@style/LiveActionRailItem"
+            android:visibility="gone">
 
             <ImageButton
                 android:id="@+id/buttonLiveReport"

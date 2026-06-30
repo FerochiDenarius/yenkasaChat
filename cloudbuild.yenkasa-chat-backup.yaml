@@ -33,6 +33,8 @@ steps:
       - --region=${_REGION}
       - --platform=managed
       - --update-env-vars=PROJECT_REQUEST_STORAGE=firestore,SOFTOTECH_FIRESTORE_DATABASE_ID=yenkasa-project-mgmt,PROJECT_REQUEST_FIRESTORE_DATABASE_ID=yenkasa-project-mgmt,MEDIA_STORAGE_PROVIDER=gcs,GCS_MEDIA_BUCKET=yenkasa-media,GCS_MAKE_PUBLIC=false,MEDIA_STORAGE_CLOUDINARY_FALLBACK=false
+      - --update-secrets=RESEND_API_KEY=RESEND_API_KEY:latest
+      - --remove-env-vars=SMTP_HOST,SMTP_PORT,SMTP_SECURE,EMAIL_USER,EMAIL_PASS
       - --quiet
 
 images:

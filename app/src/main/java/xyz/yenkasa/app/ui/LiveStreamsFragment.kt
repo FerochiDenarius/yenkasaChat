@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -17,6 +18,7 @@ import retrofit2.Callback
 import retrofit2.Response
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.adapter.LiveStreamAdapter
+import xyz.yenkasa.app.model.FollowListResponse
 import xyz.yenkasa.app.model.JoinLiveStreamRequest
 import xyz.yenkasa.app.model.LiveStream
 import xyz.yenkasa.app.model.LiveStreamResponse
@@ -34,8 +36,20 @@ class LiveStreamsFragment : Fragment() {
 
     private lateinit var adapter: LiveStreamAdapter
     private lateinit var emptyText: TextView
+    private lateinit var tabs: Map<LiveDiscoveryTab, TextView>
     private var socketListenersAttached = false
     private var selectedCommunity: String? = null
+    private var selectedTab = LiveDiscoveryTab.TRENDING
+    private var latestStreams: List<LiveStream> = emptyList()
+    private var followingHostIds: Set<String>? = null
+
+    private enum class LiveDiscoveryTab {
+        TRENDING,
+        FOLLOWING,
+        NEARBY,
+        FASHION,
+        COMMUNITIES
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         return inflater.inflate(R.layout.fragment_live_streams, container, false)
@@ -51,8 +65,7 @@ class LiveStreamsFragment : Fragment() {
             startActivity(Intent(requireContext(), StartLiveActivity::class.java))
         }
 
-        // TODO: Add UI for selecting a community, e.g. a dropdown or tabs.
-        // On selection, call setCommunity(community)
+        setupTabs(view)
 
         view.findViewById<RecyclerView>(R.id.recyclerLiveStreams).apply {
             layoutManager = LinearLayoutManager(requireContext())
@@ -77,7 +90,49 @@ class LiveStreamsFragment : Fragment() {
 
     fun setCommunity(community: String?) {
         selectedCommunity = community
+        selectedTab = LiveDiscoveryTab.COMMUNITIES
+        if (::tabs.isInitialized) updateTabState()
         loadStreams()
+    }
+
+    private fun setupTabs(view: View) {
+        tabs = mapOf(
+            LiveDiscoveryTab.TRENDING to view.findViewById(R.id.tabLiveTrending),
+            LiveDiscoveryTab.FOLLOWING to view.findViewById(R.id.tabLiveFollowing),
+            LiveDiscoveryTab.NEARBY to view.findViewById(R.id.tabLiveNearby),
+            LiveDiscoveryTab.FASHION to view.findViewById(R.id.tabLiveFashion),
+            LiveDiscoveryTab.COMMUNITIES to view.findViewById(R.id.tabLiveCommunities)
+        )
+        tabs.forEach { (tab, tabView) ->
+            tabView.isClickable = true
+            tabView.isFocusable = true
+            tabView.setOnClickListener {
+                if (selectedTab == tab) return@setOnClickListener
+                selectedTab = tab
+                updateTabState()
+                if (tab == LiveDiscoveryTab.FOLLOWING && followingHostIds == null) {
+                    loadFollowingThenApply()
+                } else {
+                    applySelectedTab(latestStreams)
+                }
+            }
+        }
+        updateTabState()
+    }
+
+    private fun updateTabState() {
+        tabs.forEach { (tab, tabView) ->
+            val selected = tab == selectedTab
+            tabView.setBackgroundResource(
+                if (selected) R.drawable.bg_live_chip_active else R.drawable.bg_live_chip_inactive
+            )
+            tabView.setTextColor(
+                ContextCompat.getColor(
+                    requireContext(),
+                    if (selected) android.R.color.white else R.color.feed_secondary_text
+                )
+            )
+        }
     }
 
     private fun loadStreams() {
@@ -97,8 +152,12 @@ class LiveStreamsFragment : Fragment() {
                     return
                 }
                 val streams = response.body()?.streams.orEmpty()
-                adapter.submitList(streams)
-                emptyText.visibility = if (streams.isEmpty()) View.VISIBLE else View.GONE
+                latestStreams = streams
+                if (selectedTab == LiveDiscoveryTab.FOLLOWING && followingHostIds == null) {
+                    loadFollowingThenApply()
+                } else {
+                    applySelectedTab(streams)
+                }
             }
 
             override fun onFailure(call: Call<LiveStreamsResponse>, t: Throwable) {
@@ -107,6 +166,64 @@ class LiveStreamsFragment : Fragment() {
                 Toast.makeText(requireContext(), liveLoadFailureMessage(t), Toast.LENGTH_SHORT).show()
             }
         })
+    }
+
+    private fun loadFollowingThenApply() {
+        val currentUserId = TokenManager.getUserId(requireContext())
+        val authToken = TokenManager.getToken(requireContext())
+        if (currentUserId.isNullOrBlank() || authToken.isNullOrBlank()) {
+            followingHostIds = emptySet()
+            applySelectedTab(latestStreams)
+            return
+        }
+
+        ApiClient.apiService.getFollowing(currentUserId, "Bearer $authToken")
+            .enqueue(object : Callback<FollowListResponse> {
+                override fun onResponse(
+                    call: Call<FollowListResponse>,
+                    response: Response<FollowListResponse>
+                ) {
+                    if (!isAdded) return
+                    followingHostIds = response.body()
+                        ?.following
+                        ?.map { it._id }
+                        ?.toSet()
+                        .orEmpty()
+                    applySelectedTab(latestStreams)
+                }
+
+                override fun onFailure(call: Call<FollowListResponse>, t: Throwable) {
+                    if (!isAdded) return
+                    followingHostIds = emptySet()
+                    applySelectedTab(latestStreams)
+                }
+            })
+    }
+
+    private fun applySelectedTab(streams: List<LiveStream>) {
+        val filtered = when (selectedTab) {
+            LiveDiscoveryTab.TRENDING -> streams.sortedWith(
+                compareByDescending<LiveStream> { it.viewerCount }
+                    .thenByDescending { it.likeCount }
+                    .thenByDescending { it.peakViewerCount }
+            )
+            LiveDiscoveryTab.FOLLOWING -> streams.filter { stream ->
+                followingHostIds.orEmpty().contains(stream.hostId)
+            }
+            LiveDiscoveryTab.NEARBY -> emptyList()
+            LiveDiscoveryTab.FASHION -> streams.filter { stream ->
+                stream.community.contains("fashion", ignoreCase = true) ||
+                    stream.title.contains("fashion", ignoreCase = true)
+            }
+            LiveDiscoveryTab.COMMUNITIES -> streams.filter { stream ->
+                selectedCommunity?.let { selected ->
+                    stream.community.equals(selected, ignoreCase = true) ||
+                        stream.communityId.equals(selected, ignoreCase = true)
+                } ?: stream.community.isNotBlank()
+            }
+        }
+        adapter.submitList(filtered)
+        emptyText.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
     }
 
     private fun joinStream(stream: LiveStream) {

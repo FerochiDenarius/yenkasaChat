@@ -16,15 +16,18 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
+import com.bumptech.glide.Glide
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import io.agora.rtc2.ChannelMediaOptions
 import io.agora.rtc2.Constants
@@ -65,6 +68,7 @@ class LiveStreamActivity : AppCompatActivity() {
     private lateinit var subtitleText: TextView
     private lateinit var viewerText: TextView
     private lateinit var timerText: TextView
+    private lateinit var hostAvatarImage: ImageView
     private lateinit var commentsContainer: LinearLayout
     private lateinit var commentInput: EditText
     private lateinit var sendButton: Button
@@ -105,6 +109,7 @@ class LiveStreamActivity : AppCompatActivity() {
     private var liveIdentityAvatar: String = ""
     private var liveLikeCount = 0
     private var lastReactionAt = 0L
+    private var pendingGuestSeatPermissionRequest = false
     private val recentLiveEventKeys = linkedMapOf<String, Long>()
     private val liveJoinAckHandler = Handler(Looper.getMainLooper())
     private val liveJoinRetryRunnable = Runnable { handleLiveJoinAckTimeout() }
@@ -137,6 +142,20 @@ class LiveStreamActivity : AppCompatActivity() {
         ActivityResultContracts.RequestMultiplePermissions()
     ) { result ->
         val granted = hasAgoraPermissions()
+        if (pendingGuestSeatPermissionRequest) {
+            pendingGuestSeatPermissionRequest = false
+            val canBroadcast = hasBroadcastPermissions()
+            Log.i(
+                tag,
+                "Guest seat permission result. granted=$canBroadcast streamId=$streamId channel=$channelName result=$result"
+            )
+            if (canBroadcast) {
+                emitGuestSeatRequest()
+            } else {
+                Toast.makeText(this, R.string.camera_mic_permissions_required, Toast.LENGTH_LONG).show()
+            }
+            return@registerForActivityResult
+        }
         Log.i(
             tag,
             "Agora permission result. granted=$granted host=$isHost streamId=$streamId channel=$channelName result=$result"
@@ -270,6 +289,7 @@ class LiveStreamActivity : AppCompatActivity() {
         subtitleText = findViewById(R.id.textLiveSubtitle)
         viewerText = findViewById(R.id.textLiveViewers)
         timerText = findViewById(R.id.textLiveTimer)
+        hostAvatarImage = findViewById(R.id.imageLiveHostAvatar)
         commentsContainer = findViewById(R.id.liveCommentsContainer)
         commentInput = findViewById(R.id.editLiveComment)
         sendButton = findViewById(R.id.buttonSendLiveComment)
@@ -295,17 +315,20 @@ class LiveStreamActivity : AppCompatActivity() {
         guestAdapter?.submitList(activeGuests.toList())
 
         val hostName = intent.getStringExtra(EXTRA_HOST).orEmpty()
+        val hostAvatar = intent.getStringExtra(EXTRA_HOST_AVATAR).orEmpty()
         val liveTitle = intent.getStringExtra(EXTRA_TITLE).orEmpty()
         val community = intent.getStringExtra(EXTRA_COMMUNITY).orEmpty()
         titleText.text = hostName.ifBlank { getString(R.string.viewer_fallback) }
+        bindHostAvatar(hostAvatar.ifBlank { if (isHost) liveEventAvatar() else "" })
         subtitleText.text = if (community.isNotBlank()) {
             getString(R.string.live_title_with_community, liveTitle, community)
         } else {
             liveTitle.ifBlank { getString(R.string.live_from_yenkasa) }
         }
         hostControls.visibility = if (isHost) View.VISIBLE else View.GONE
-        findViewById<View>(R.id.containerLiveRequestSeat).visibility = if (isHost) View.GONE else View.VISIBLE
+        findViewById<View>(R.id.containerLiveRequestSeat).visibility = View.GONE
         buttonRequestSeat.visibility = if (isHost) View.GONE else View.VISIBLE
+        findViewById<View>(R.id.containerLiveReport).visibility = View.GONE
         scheduledEndAtMillis = parseIsoMillis(intent.getStringExtra(EXTRA_SCHEDULED_END_AT))
         timerText.visibility = if (isHost && scheduledEndAtMillis > 0L) View.VISIBLE else View.GONE
         if (timerText.visibility == View.VISIBLE) {
@@ -319,7 +342,7 @@ class LiveStreamActivity : AppCompatActivity() {
         val composer = findViewById<View>(R.id.liveCommentComposer)
         val audienceActions = findViewById<View>(R.id.liveAudienceActions)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.liveRoot)) { _, insets ->
-            val safeBars = insets.getInsets(
+            val safeBars = insets.getInsetsIgnoringVisibility(
                 WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
             )
             val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
@@ -352,8 +375,9 @@ class LiveStreamActivity : AppCompatActivity() {
     private fun bindActions() {
         findViewById<View>(R.id.buttonLiveBack).setOnClickListener { onBackPressed() }
         findViewById<View>(R.id.buttonLiveMore).setOnClickListener {
-            Toast.makeText(this, R.string.more_options, Toast.LENGTH_SHORT).show()
+            showLiveMoreSheet()
         }
+        findViewById<View>(R.id.buttonLiveEmoji).setOnClickListener { showLiveEmojiPicker() }
         sendButton.setOnClickListener { sendComment() }
 
         // Expanded click targets for the action rail
@@ -394,11 +418,70 @@ class LiveStreamActivity : AppCompatActivity() {
         inputMethodManager.showSoftInput(commentInput, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
     }
 
+    private fun showLiveEmojiPicker() {
+        val emojis = arrayOf("😀", "😂", "😍", "🔥", "💚", "👏", "🎉", "✨", "🙏", "👍", "❤️", "👑", "🚀", "💎")
+        AlertDialog.Builder(this)
+            .setTitle(R.string.chat_emoji_title)
+            .setItems(emojis) { _, which ->
+                insertEmojiIntoComment(emojis[which])
+            }
+            .show()
+    }
+
+    private fun insertEmojiIntoComment(emoji: String) {
+        val editable = commentInput.text ?: return
+        val start = commentInput.selectionStart.coerceAtLeast(0)
+        val end = commentInput.selectionEnd.coerceAtLeast(0)
+        editable.replace(minOf(start, end), maxOf(start, end), emoji)
+        commentInput.requestFocus()
+    }
+
+    private fun bindHostAvatar(avatarUrl: String?) {
+        val url = avatarUrl?.trim().orEmpty()
+        if (url.isBlank() || url.equals("null", ignoreCase = true) || url.equals("undefined", ignoreCase = true)) {
+            hostAvatarImage.setImageResource(R.drawable.ic_default_avatar)
+            return
+        }
+        Glide.with(hostAvatarImage)
+            .load(url)
+            .placeholder(R.drawable.ic_default_avatar)
+            .error(R.drawable.ic_default_avatar)
+            .circleCrop()
+            .into(hostAvatarImage)
+    }
+
     private fun showReportToast() {
         Toast.makeText(this, R.string.live_report_unavailable, Toast.LENGTH_SHORT).show()
     }
 
+    private fun showLiveMoreSheet() {
+        val options = if (isHost) {
+            arrayOf(getString(R.string.live_report_label))
+        } else {
+            arrayOf(getString(R.string.request_to_speak), getString(R.string.live_report_label))
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.more_options)
+            .setItems(options) { _, which ->
+                val selected = options[which]
+                when (selected) {
+                    getString(R.string.request_to_speak) -> requestGuestSeat()
+                    getString(R.string.live_report_label) -> showReportToast()
+                }
+            }
+            .show()
+    }
+
     private fun requestGuestSeat() {
+        if (!hasBroadcastPermissions()) {
+            pendingGuestSeatPermissionRequest = true
+            agoraPermissionLauncher.launch(requiredBroadcastPermissions())
+            return
+        }
+        emitGuestSeatRequest()
+    }
+
+    private fun emitGuestSeatRequest() {
         val payload = JSONObject()
             .put("streamId", streamId)
             .put("userId", TokenManager.getUserId(this).orEmpty())
@@ -836,6 +919,9 @@ class LiveStreamActivity : AppCompatActivity() {
                 user.profileImage?.takeIf { it.isNotBlank() }?.let {
                     liveIdentityAvatar = it
                     TokenManager.saveProfilePicUrl(this@LiveStreamActivity, it)
+                    if (isHost && ::hostAvatarImage.isInitialized) {
+                        bindHostAvatar(it)
+                    }
                 }
                 TokenManager.saveCoinsPrecise(this@LiveStreamActivity, user.resolvedCoinsBalance())
             }
@@ -965,11 +1051,22 @@ class LiveStreamActivity : AppCompatActivity() {
     }
 
     private fun requiredAgoraPermissions(): Array<String> {
+        if (!isHost) return emptyArray()
+        return requiredBroadcastPermissions()
+    }
+
+    private fun requiredBroadcastPermissions(): Array<String> {
         return arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
     }
 
     private fun hasAgoraPermissions(): Boolean {
         return requiredAgoraPermissions().all {
+            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    private fun hasBroadcastPermissions(): Boolean {
+        return requiredBroadcastPermissions().all {
             ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
         }
     }
@@ -1565,6 +1662,7 @@ class LiveStreamActivity : AppCompatActivity() {
         private const val EXTRA_STREAM_ID = "stream_id"
         private const val EXTRA_TITLE = "title"
         private const val EXTRA_HOST = "host"
+        private const val EXTRA_HOST_AVATAR = "host_avatar"
         private const val EXTRA_COMMUNITY = "community"
         private const val EXTRA_CHANNEL = "channel"
         private const val EXTRA_TOKEN = "token"
@@ -1589,6 +1687,7 @@ class LiveStreamActivity : AppCompatActivity() {
                 .putExtra(EXTRA_STREAM_ID, stream.id)
                 .putExtra(EXTRA_TITLE, stream.title)
                 .putExtra(EXTRA_HOST, stream.hostUsername)
+                .putExtra(EXTRA_HOST_AVATAR, stream.hostAvatar)
                 .putExtra(EXTRA_COMMUNITY, stream.community)
                 .putExtra(EXTRA_CHANNEL, stream.agoraChannel)
                 .putExtra(EXTRA_TOKEN, agora.token)

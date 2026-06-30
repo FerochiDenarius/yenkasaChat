@@ -19,9 +19,9 @@ class FeedTabsController(
         POPULAR
     }
 
-    var selectedTabId: Int = R.id.tabForYou
+    var selectedTabId: Int = R.id.tabLatest
         private set
-    var selectedMode: FeedMode = FeedMode.FOR_YOU
+    var selectedMode: FeedMode = FeedMode.LATEST
         private set
 
     fun selectMode(mode: FeedMode) {

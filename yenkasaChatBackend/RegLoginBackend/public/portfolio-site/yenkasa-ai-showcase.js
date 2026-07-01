@@ -1,50 +1,11 @@
-const screenshotAssets = [
-  {
-    category: "Desktop",
-    title: "Desktop intelligence workspace",
-    src: "https://storage.googleapis.com/yenkasa-media/portfolio/yenkasa-ai/screenshot-2026-06-26-at-8-56-24-am.jpg",
-  },
-  {
-    category: "Web",
-    title: "Web product interface",
-    src: "https://storage.googleapis.com/yenkasa-media/portfolio/yenkasa-ai/screenshot-2026-06-26-at-8-58-50-am.jpg",
-  },
-  {
-    category: "AI Chat",
-    title: "Evidence-based AI chat",
-    src: "https://storage.googleapis.com/yenkasa-media/portfolio/yenkasa-ai/screenshot-2026-06-26-at-8-56-24-am.jpg",
-  },
-  {
-    category: "Repository Intelligence",
-    title: "Repository file retrieval",
-    src: "https://storage.googleapis.com/yenkasa-media/portfolio/yenkasa-ai/screenshot-2026-06-26-at-8-58-50-am.jpg",
-  },
-  {
-    category: "Operational Intelligence",
-    title: "Operational intelligence workflow",
-    src: "https://storage.googleapis.com/yenkasa-media/portfolio/yenkasa-ai/screenshot-2026-06-26-at-8-56-24-am.jpg",
-  },
-  {
-    category: "Dashboards",
-    title: "Product intelligence dashboard",
-    src: "https://storage.googleapis.com/yenkasa-media/portfolio/yenkasa-ai/screenshot-2026-06-26-at-8-58-50-am.jpg",
-  },
-  {
-    category: "Architecture",
-    title: "Central intelligence architecture",
-    src: "https://storage.googleapis.com/yenkasa-media/portfolio/yenkasa-ai/screenshot-2026-06-26-at-8-56-24-am.jpg",
-  },
-];
+const screenshotAssets = [];
 
 const videoFiles = [
   ["Product Demo", "Screen Recording 2026-06-25 at 8.22.11\u202fPM.mov"],
   ["Architecture Demo", "Screen Recording 2026-06-25 at 8.24.06\u202fPM.mov"],
   ["Repository Demo", "Screen Recording 2026-06-25 at 9.00.32\u202fPM.mov"],
   ["Operational Intelligence Demo", "Screen Recording 2026-06-25 at 9.04.07\u202fPM.mov"],
-  ["Engineering Demo", "Screen Recording 2026-06-26 at 8.50.23\u202fAM.mov"],
-  ["Product Demo", "Screen Recording 2026-06-26 at 8.57.25\u202fAM.mov"],
-  ["Repository Demo", "Screen Recording 2026-06-26 at 8.58.38\u202fAM.mov"],
-  ["Engineering Demo", "Screen Recording 2026-06-26 at 9.00.26\u202fAM.mov"],
+  ["Engineering Demo", "Screen Recording 2026-06-26 at 8.57.25\u202fAM.mov"],
 ];
 
 const videoAssets = videoFiles.map(([category, name], index) => ({
@@ -60,13 +21,12 @@ function mediaCard(item, type) {
   let media;
 
   if (type === "video") {
-    media = document.createElement("a");
-    media.className = "ai-video-placeholder";
-    media.href = item.src;
-    media.target = "_blank";
-    media.rel = "noopener";
-    media.setAttribute("aria-label", `Open ${item.title}`);
-    media.innerHTML = "<span>Watch Demo</span>";
+    media = document.createElement("video");
+    media.src = item.src;
+    media.controls = true;
+    media.preload = "metadata";
+    media.playsInline = true;
+    media.setAttribute("aria-label", item.title);
   } else {
     media = document.createElement("img");
     media.src = item.src;
@@ -96,7 +56,14 @@ function mediaCard(item, type) {
 function renderGallery(id, items, type) {
   const target = document.getElementById(id);
   if (!target || target.dataset.rendered === "true") return;
-  target.replaceChildren(...items.map((item) => mediaCard(item, type)));
+  if (items.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "ai-gallery-placeholder";
+    empty.textContent = "Final screenshot set reserved. Use the playable demos above for the current product walkthrough.";
+    target.replaceChildren(empty);
+  } else {
+    target.replaceChildren(...items.map((item) => mediaCard(item, type)));
+  }
   target.dataset.rendered = "true";
 }
 

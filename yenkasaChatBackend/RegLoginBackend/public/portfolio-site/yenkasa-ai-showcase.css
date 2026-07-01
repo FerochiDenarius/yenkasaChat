@@ -78,8 +78,30 @@ body.ai-showcase video {
   height: 42px !important;
   min-width: 42px;
   border-radius: 10px;
-  object-fit: cover;
   box-shadow: 0 10px 24px rgba(18, 101, 255, 0.22);
+}
+
+.ai-logo-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: linear-gradient(135deg, #1265ff, #7c3aed 58%, #0d9488);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  font-weight: 950;
+  flex: 0 0 auto;
+}
+
+.ai-logo-mark span {
+  width: 66%;
+  height: 66%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(255, 255, 255, 0.72);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  line-height: 1;
 }
 
 .ai-brand span span {
@@ -168,9 +190,13 @@ body.ai-showcase video {
   width: 86px !important;
   height: 86px !important;
   border-radius: 18px;
-  object-fit: cover;
   margin-bottom: 18px;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.25);
+}
+
+.ai-hero-logo.ai-logo-mark span {
+  border-radius: 14px;
+  font-size: 1.25rem;
 }
 
 .ai-hero h1 {
@@ -677,32 +703,15 @@ body.ai-showcase video {
 }
 
 .ai-media-card img,
-.ai-media-card video,
-.ai-video-placeholder {
+.ai-media-card video {
   width: 100%;
   aspect-ratio: 16 / 10;
   object-fit: cover;
   background: #0b1424;
 }
 
-.ai-video-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  background: linear-gradient(135deg, rgba(8, 21, 38, 0.96), rgba(18, 101, 255, 0.76));
-  font-weight: 950;
-}
-
-.ai-video-placeholder span {
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.34);
-  border-radius: 8px;
-  padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.12);
+.ai-media-card video {
+  object-fit: contain;
 }
 
 .ai-media-card div {
@@ -762,11 +771,20 @@ body.ai-showcase video {
   padding: 24px;
 }
 
-.ai-founder img {
+.ai-founder-avatar {
   width: 96px;
   height: 96px;
+  min-width: 96px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 8px;
-  object-fit: cover;
+  color: #fff;
+  background: linear-gradient(135deg, #081526, #1265ff);
+  font-size: 1.6rem !important;
+  font-weight: 950;
+  letter-spacing: 0;
+  text-transform: uppercase;
 }
 
 .ai-founder h3 {

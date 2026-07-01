@@ -1,84 +1,38 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>YenkasaAI Demo</title>
-  <meta name="description" content="Try YenkasaAI repository intelligence, operational intelligence, and engineering reasoning in the browser." />
-  <link rel="stylesheet" href="/ai/app.css?v=20260627-1" />
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="/ai/">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="A new Flutter project.">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="yenkasa_ai_flutter">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>yenkasa_ai_flutter</title>
+  <link rel="manifest" href="manifest.json">
 </head>
 <body>
-  <button class="menu-backdrop" id="menuBackdrop" type="button" aria-label="Close menu"></button>
-  <main class="shell">
-    <aside class="side" id="sideNav">
-      <div class="side-heading">
-        <a class="brand" href="/yenkasa-ai">
-          <img class="brand-logo" src="/images/yenkasa_ai_logo.png?v=20260626-2" width="42" height="42" alt="YenkasaAI logo" />
-          <span><strong>YenkasaAI</strong><small>Engineering intelligence demo</small></span>
-        </a>
-        <button class="menu-close" id="menuClose" type="button" aria-label="Close menu">×</button>
-      </div>
-      <div class="status-card">
-        <span class="status-dot"></span>
-        <div>
-          <strong>Live production backend</strong>
-          <p>Repository intelligence is backed by MongoDB Atlas, branch metadata, exact file retrieval, and Gemini reasoning.</p>
-        </div>
-      </div>
-      <div class="prompt-list" id="promptList">
-        <button data-prompt="List files in yenkasaChat">List files in yenkasaChat</button>
-        <button data-prompt="Which branch are you indexed from for yenkasaChat?">Which branch is indexed?</button>
-        <button data-prompt="Fetch routes/messages.routes.js in yenkasaChat">Fetch messages.routes.js</button>
-        <button data-prompt="Explain config/livestreamPermissions.js in yenkasaChat">Explain livestream permissions</button>
-        <button data-prompt="Where is canStartLivestream defined in yenkasaChat?">Find canStartLivestream</button>
-        <button data-prompt="Audit notification system in yenkasaChat">Audit notification system</button>
-        <button data-prompt="Show repository health for AfaPay">Show repository health</button>
-      </div>
-      <button class="logout-button" id="logoutButton" type="button">Log out</button>
-    </aside>
-
-    <section class="workspace">
-      <header class="topline">
-        <button class="menu-toggle" id="menuToggle" type="button" aria-controls="sideNav" aria-expanded="false">Menu</button>
-        <div>
-          <p class="kicker">Public browser demo</p>
-          <h1>Ask YenkasaAI about real repositories.</h1>
-        </div>
-        <a class="portfolio-link" href="/yenkasa-ai">Showcase</a>
-      </header>
-
-      <section class="auth-panel" id="authPanel">
-        <div>
-          <h2>Start a secure session</h2>
-          <p>Use an existing YenkasaAI account, create a test account, or start a temporary demo session.</p>
-        </div>
-        <form id="authForm" class="auth-form">
-          <input id="fullName" name="fullName" autocomplete="name" placeholder="Full name for registration" />
-          <input id="email" name="email" type="email" autocomplete="email" placeholder="Email address" required />
-          <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Password" required />
-          <div class="auth-actions">
-            <button type="submit" data-mode="login">Login</button>
-            <button type="submit" data-mode="register">Register</button>
-            <button type="button" id="demoSession">Demo session</button>
-          </div>
-        </form>
-        <p class="message" id="authMessage"></p>
-      </section>
-
-      <section class="chat-panel">
-        <div class="messages" id="messages">
-          <article class="message assistant">
-            <strong>YenkasaAI</strong>
-            <p>Choose a prompt or ask for a repository file. Exact file requests are routed through the Repository Intelligence Layer before Gemini is used.</p>
-          </article>
-        </div>
-        <form id="chatForm" class="composer">
-          <textarea id="question" rows="3" placeholder="Fetch routes/messages.routes.js in yenkasaChat"></textarea>
-          <button type="submit">Run</button>
-        </form>
-      </section>
-    </section>
-  </main>
-  <script src="/ai/app.js?v=20260627-1"></script>
+  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

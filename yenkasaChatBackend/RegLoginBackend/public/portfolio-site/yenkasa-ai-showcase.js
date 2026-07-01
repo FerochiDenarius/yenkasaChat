@@ -57,13 +57,19 @@ function mediaCard(item, type) {
   const article = document.createElement("article");
   article.className = "ai-media-card";
 
-  const media = type === "video" ? document.createElement("video") : document.createElement("img");
-  media.src = item.src;
+  let media;
 
   if (type === "video") {
-    media.controls = true;
-    media.preload = "metadata";
+    media = document.createElement("a");
+    media.className = "ai-video-placeholder";
+    media.href = item.src;
+    media.target = "_blank";
+    media.rel = "noopener";
+    media.setAttribute("aria-label", `Open ${item.title}`);
+    media.innerHTML = "<span>Watch Demo</span>";
   } else {
+    media = document.createElement("img");
+    media.src = item.src;
     media.alt = item.title;
     media.loading = "lazy";
     media.decoding = "async";
@@ -89,9 +95,36 @@ function mediaCard(item, type) {
 
 function renderGallery(id, items, type) {
   const target = document.getElementById(id);
-  if (!target) return;
+  if (!target || target.dataset.rendered === "true") return;
   target.replaceChildren(...items.map((item) => mediaCard(item, type)));
+  target.dataset.rendered = "true";
 }
 
-renderGallery("screenshotGallery", screenshotAssets, "image");
-renderGallery("videoGallery", videoAssets, "video");
+function renderWhenVisible(id, items, type) {
+  const target = document.getElementById(id);
+  if (!target) return;
+
+  const placeholder = document.createElement("div");
+  placeholder.className = "ai-gallery-placeholder";
+  placeholder.textContent = "Gallery loads when this section enters view.";
+  target.replaceChildren(placeholder);
+
+  if (!("IntersectionObserver" in window)) {
+    renderGallery(id, items, type);
+    return;
+  }
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      observer.disconnect();
+      renderGallery(id, items, type);
+    },
+    { rootMargin: "260px" }
+  );
+
+  observer.observe(target);
+}
+
+renderWhenVisible("screenshotGallery", screenshotAssets, "image");
+renderWhenVisible("videoGallery", videoAssets, "video");

@@ -16,6 +16,7 @@
 
 * {
   box-sizing: border-box;
+  min-width: 0;
 }
 
 html {
@@ -28,6 +29,7 @@ body.ai-showcase {
   background: var(--paper);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.56;
+  overflow-x: hidden;
 }
 
 body.ai-showcase a {
@@ -137,8 +139,7 @@ body.ai-showcase video {
 .ai-hero {
   color: #fff;
   background:
-    linear-gradient(125deg, rgba(8, 21, 38, 0.96), rgba(13, 48, 74, 0.9) 44%, rgba(13, 148, 136, 0.68)),
-    url("https://storage.googleapis.com/yenkasa-media/portfolio/yenkasa-ai/screenshot-2026-06-26-at-8-56-24-am.jpg") center/cover no-repeat;
+    linear-gradient(125deg, rgba(8, 21, 38, 0.98), rgba(13, 48, 74, 0.95) 44%, rgba(13, 148, 136, 0.74));
 }
 
 .ai-hero-grid {
@@ -148,6 +149,10 @@ body.ai-showcase video {
   gap: 38px;
   align-items: center;
   padding: 66px 0 78px;
+}
+
+.ai-hero-grid > * {
+  min-width: 0;
 }
 
 .ai-kicker {
@@ -181,6 +186,7 @@ body.ai-showcase video {
   color: #e4f0ff;
   font-size: clamp(1.04rem, 2vw, 1.22rem);
   margin: 24px 0;
+  overflow-wrap: anywhere;
 }
 
 .ai-badges,
@@ -209,6 +215,7 @@ body.ai-showcase video {
 }
 
 .ai-command-center {
+  min-width: 0;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 8px;
   background: rgba(6, 14, 26, 0.84);
@@ -240,6 +247,7 @@ body.ai-showcase video {
 .ai-signal-list div {
   padding: 16px 18px;
   background: rgba(255, 255, 255, 0.04);
+  overflow-wrap: anywhere;
 }
 
 .ai-signal-list span,
@@ -258,12 +266,14 @@ body.ai-showcase video {
   display: block;
   margin-top: 4px;
   color: #eef6ff;
+  overflow-wrap: anywhere;
 }
 
 .ai-terminal-body {
   padding: 18px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.9rem;
+  overflow-wrap: anywhere;
 }
 
 .ai-terminal-body p {
@@ -306,6 +316,8 @@ body.ai-showcase video {
 
 .ai-section {
   padding: 86px 0;
+  content-visibility: auto;
+  contain-intrinsic-size: 820px;
 }
 
 .ai-section:nth-of-type(even) {
@@ -431,9 +443,7 @@ body.ai-showcase video {
 
 .ai-comparison {
   color: #fff;
-  background:
-    linear-gradient(135deg, rgba(8, 21, 38, 0.96), rgba(7, 60, 88, 0.9)),
-    url("https://storage.googleapis.com/yenkasa-media/portfolio/yenkasa-ai/screenshot-2026-06-26-at-8-58-50-am.jpg") center/cover no-repeat;
+  background: linear-gradient(135deg, rgba(8, 21, 38, 0.98), rgba(7, 60, 88, 0.94));
 }
 
 .ai-comparison .ai-muted {
@@ -651,12 +661,48 @@ body.ai-showcase video {
   overflow: hidden;
 }
 
+.ai-gallery-placeholder {
+  grid-column: 1 / -1;
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: #fff;
+  font-weight: 900;
+  text-align: center;
+  padding: 20px;
+}
+
 .ai-media-card img,
-.ai-media-card video {
+.ai-media-card video,
+.ai-video-placeholder {
   width: 100%;
   aspect-ratio: 16 / 10;
   object-fit: cover;
   background: #0b1424;
+}
+
+.ai-video-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: linear-gradient(135deg, rgba(8, 21, 38, 0.96), rgba(18, 101, 255, 0.76));
+  font-weight: 950;
+}
+
+.ai-video-placeholder span {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .ai-media-card div {
@@ -736,9 +782,7 @@ body.ai-showcase video {
 
 .ai-contact {
   color: #fff;
-  background:
-    linear-gradient(135deg, rgba(8, 21, 38, 0.94), rgba(8, 54, 79, 0.88)),
-    url("https://storage.googleapis.com/yenkasa-media/portfolio/yenkasa-ai/screenshot-2026-06-26-at-8-58-50-am.jpg") center/cover no-repeat;
+  background: linear-gradient(135deg, rgba(8, 21, 38, 0.98), rgba(8, 54, 79, 0.94));
 }
 
 .ai-contact .ai-muted {
@@ -859,14 +903,28 @@ body.ai-showcase video {
 
   .ai-nav-links {
     width: 100%;
+    max-width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
     gap: 8px;
   }
 
   .ai-nav-links a {
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 9px;
     font-size: 0.86rem;
+    text-align: center;
   }
 
-  .ai-nav-cta,
+  .ai-nav-links .ai-nav-cta {
+    grid-column: auto;
+  }
+
   .ai-btn {
     width: 100%;
   }

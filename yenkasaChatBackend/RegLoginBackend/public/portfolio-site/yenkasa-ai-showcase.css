@@ -78,30 +78,9 @@ body.ai-showcase video {
   height: 42px !important;
   min-width: 42px;
   border-radius: 10px;
+  object-fit: cover;
+  background: #251253;
   box-shadow: 0 10px 24px rgba(18, 101, 255, 0.22);
-}
-
-.ai-logo-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  background: linear-gradient(135deg, #1265ff, #7c3aed 58%, #0d9488);
-  border: 1px solid rgba(255, 255, 255, 0.32);
-  font-weight: 950;
-  flex: 0 0 auto;
-}
-
-.ai-logo-mark span {
-  width: 66%;
-  height: 66%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid rgba(255, 255, 255, 0.72);
-  border-radius: 8px;
-  font-size: 0.82rem;
-  line-height: 1;
 }
 
 .ai-brand span span {
@@ -152,6 +131,12 @@ body.ai-showcase video {
   background: #fff;
 }
 
+.ai-btn.web {
+  color: #041321;
+  background: #92f4d1;
+  box-shadow: 0 12px 28px rgba(146, 244, 209, 0.16);
+}
+
 .ai-btn.ghost {
   border-color: rgba(255, 255, 255, 0.44);
   color: #fff;
@@ -191,12 +176,9 @@ body.ai-showcase video {
   height: 86px !important;
   border-radius: 18px;
   margin-bottom: 18px;
+  object-fit: cover;
+  background: #251253;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.25);
-}
-
-.ai-hero-logo.ai-logo-mark span {
-  border-radius: 14px;
-  font-size: 1.25rem;
 }
 
 .ai-hero h1 {
@@ -799,12 +781,20 @@ body.ai-showcase video {
 }
 
 .ai-contact {
-  color: #fff;
-  background: linear-gradient(135deg, rgba(8, 21, 38, 0.98), rgba(8, 54, 79, 0.94));
+  color: var(--ink);
+  background: linear-gradient(180deg, #f8fbff 0%, #edf4fb 100%);
+}
+
+.ai-contact .ai-section-head h2 {
+  color: var(--ink);
+}
+
+.ai-contact .ai-kicker {
+  color: #0f766e;
 }
 
 .ai-contact .ai-muted {
-  color: #d9e8f6;
+  color: #334155;
 }
 
 .ai-contact-grid {
@@ -813,15 +803,23 @@ body.ai-showcase video {
 
 .ai-contact-card {
   min-height: 174px;
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--ink);
+  border: 1px solid #cbd7e6;
+  background: #ffffff;
   border-radius: 8px;
   padding: 22px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   overflow-wrap: anywhere;
+  box-shadow: 0 18px 42px rgba(7, 18, 38, 0.08);
+}
+
+.ai-contact-card span {
+  color: #0f766e;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .ai-contact-card strong {
@@ -831,7 +829,23 @@ body.ai-showcase video {
 }
 
 .ai-contact-card small {
-  color: #d9e8f6;
+  color: #475569;
+  font-weight: 750;
+}
+
+.ai-contact-primary {
+  color: #ffffff;
+  border-color: rgba(18, 101, 255, 0.28);
+  background: linear-gradient(135deg, #081526, #1265ff);
+}
+
+.ai-contact-primary span,
+.ai-contact-primary small {
+  color: #dbeafe;
+}
+
+.ai-contact-primary strong {
+  color: #ffffff;
 }
 
 .ai-footer {

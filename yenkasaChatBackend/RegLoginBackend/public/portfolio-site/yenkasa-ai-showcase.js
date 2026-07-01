@@ -6,6 +6,8 @@ const videoFiles = [
   ["Repository Demo", "Screen Recording 2026-06-25 at 9.00.32\u202fPM.mov"],
   ["Operational Intelligence Demo", "Screen Recording 2026-06-25 at 9.04.07\u202fPM.mov"],
   ["Engineering Demo", "Screen Recording 2026-06-26 at 8.57.25\u202fAM.mov"],
+  ["Latest Product Walkthrough", "Screen Recording 2026-07-01 at 10.44.25\u202fAM.mov"],
+  ["Latest Web Version Demo", "Screen Recording 2026-07-01 at 10.53.40\u202fAM.mov"],
 ];
 
 const videoAssets = videoFiles.map(([category, name], index) => ({

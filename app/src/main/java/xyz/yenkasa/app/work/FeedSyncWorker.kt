@@ -21,12 +21,18 @@ class FeedSyncWorker(
             val token = TokenManager.getToken(applicationContext).orEmpty()
             val communityNames = AppLocalStore.getFeedCacheCommunityNames(applicationContext).orEmpty()
 
-            if (token.isBlank() || communityNames.isBlank()) {
+            if (token.isBlank()) {
                 return Result.success()
             }
 
             val response = ApiClient.apiService
-                .getPostsByCommunities("Bearer $token", communityNames, 1, 20)
+                .getFeedByMode(
+                    token = "Bearer $token",
+                    mode = DEFAULT_FEED_MODE,
+                    communityNames = communityNames.takeIf { it.isNotBlank() },
+                    page = 1,
+                    limit = 20
+                )
                 .execute()
 
             if (!response.isSuccessful || response.body() == null) {
@@ -37,9 +43,10 @@ class FeedSyncWorker(
             val body = response.body()!!
             val gson = Gson()
             val cacheController = FeedCacheController(applicationContext, gson)
-            val cacheKey = cacheController.cacheKeyForCommunityNames(
+            val communityKey = cacheController.cacheKeyForCommunityNames(
                 communityNames.split(",").map { it.trim() }.filter { it.isNotBlank() }
             )
+            val cacheKey = "${DEFAULT_FEED_MODE}_$communityKey"
             val payload = CachedFeedPayload(
                 posts = body.posts,
                 currentPage = body.pagination.currentPage,
@@ -66,5 +73,6 @@ class FeedSyncWorker(
     private companion object {
         const val CACHE_VERSION = 3
         const val PLAYER_RENDERER_VERSION = "yenkasa_player_v3"
+        const val DEFAULT_FEED_MODE = "for-you"
     }
 }

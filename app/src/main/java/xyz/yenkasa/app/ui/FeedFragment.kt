@@ -875,11 +875,16 @@ class FeedFragment : Fragment() {
         playerCoordinator?.resetRenderedState()
         val cacheKey = feedCacheKeyFor(selectedCommunityNames())
         if (isOnline()) {
-            posts.clear()
             activeCacheKey = cacheKey
             lastLoadedPostId = null
-            recyclerView.scrollToPosition(0)
-            renderPosts()
+            val loadedCachedFeed = loadCachedFeed(
+                cacheKey = cacheKey,
+                replace = true,
+                allowGlobalFallback = posts.isEmpty()
+            )
+            if (!loadedCachedFeed && posts.isEmpty()) {
+                renderPosts()
+            }
         } else {
             loadCachedFeed(
                 cacheKey = cacheKey,

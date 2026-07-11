@@ -213,9 +213,122 @@ Ran backend test suite:
 - Command: `npm test`
 - Result: 26 tests passed, 0 failed.
 
+## Stage 7 - Cloud Run Cost Control
+
+### Action
+
+Updated Cloud Run service `yenkasa-ai-backend` in `europe-west1`:
+
+- Removed the always-on minimum instance setting by setting min instances to `0`.
+- Restored CPU throttling.
+
+### Reason
+
+This service was the clearest Cloud Run credits/cost eater because it had `minScale=1` and CPU configured as always allocated. That means it could generate cost even when no users were actively using it.
+
+### Validation
+
+Cloud Run service state was checked after the update:
+
+| Service | Region | Min scale | Max scale | CPU throttling | Ready |
+|---|---:|---:|---:|---:|---:|
+| `yenkasa-ai` | `europe-west1` | unset/0 | 10 | default | true |
+| `yenkasa-ai-backend` | `europe-west1` | unset/0 | 5 | true | true |
+| `yenkasa-chat-backend-backup` | `europe-west1` | unset/0 | 2 | default | true |
+| `yenkasa-code-agent` | `europe-west1` | unset/0 | 5 | default | true |
+
+### Remaining Cost Note
+
+Cloud SQL was not stopped. Stopping Cloud SQL before the Heroku backend is fully deployed and verified could break active production services. Treat Cloud SQL shutdown/migration as a separate approval point after Heroku health checks pass.
+
+## Stage 8 - Feed Cache and Pagination Readiness
+
+### Action
+
+Updated Android feed behavior:
+
+- `FeedFragment` now preserves the existing feed while a refresh is loading instead of clearing posts immediately.
+- If cached feed data exists for the active feed mode/community key, it is rendered during refresh.
+- `FeedSyncWorker` now saves the background feed cache using the same `for-you_<community>` key shape that `FeedFragment` reads.
+- Existing pagination behavior remains unchanged: page 1 replaces the list after successful load, later pages append unique posts.
+
+### Reason
+
+The app already had local feed caching and pagination, but an online refresh could briefly clear the visible feed. Also, the background worker wrote cache entries under a different key than the foreground reader, so cached feed data could be missed.
+
+### Validation
+
+- Command: `./gradlew :app:compileDebugKotlin`
+- Result: build successful.
+
+## Stage 9 - Play Store Rollout Version Code
+
+### Action
+
+Updated `app/build.gradle.kts`:
+
+- `versionCode`: `64` -> `65`
+- `versionName`: `5.7` -> `5.8`
+
+### Reason
+
+Google Play requires every uploaded release artifact to use a version code greater than all previous rollout artifacts.
+
+### Validation
+
+- Command: `./gradlew :app:processReleaseMainManifest`
+- Result: build successful.
+- Command: `./gradlew :app:bundleRelease`
+- Result: build successful.
+- Release bundle: `app/build/outputs/bundle/release/app-release.aab`
+- Bundle manifest validation: generated release bundle manifest shows `versionCode=65` and `versionName=5.8`.
+
+## Stage 10 - Heroku Backend Deployment
+
+### Action
+
+Deployed backend app `yenkasa-backend-backup` to Heroku from a clean temporary source snapshot.
+
+### Reason
+
+The first deploy attempt used `git subtree push` from the monorepo and stalled during history upload. The backend tree contains tracked `node_modules`, which makes direct history pushes too large and slow. The successful deployment used a clean one-commit snapshot excluding:
+
+- `node_modules`
+- `.env`
+- `.DS_Store`
+- `.git`
+
+### Deployment Result
+
+- Heroku release: `v4`
+- Stack: `heroku-24`
+- App URL: `https://yenkasa-backend-backup-45b321a459ee.herokuapp.com/`
+- Custom API host: `https://api.yenkasa.xyz`
+- Process types detected: `web`, `worker_moderation`, `worker_yme`
+- Active dyno: `web.1`
+
+### Validation
+
+- `heroku ps --app yenkasa-backend-backup`: `web.1` is up.
+- `curl -i https://api.yenkasa.xyz/health`: returned HTTP `200`.
+- Health response: `{"status":"ok","uptime":558.961124554,"env":"production"}`
+- Heroku logs show:
+  - Server running in production mode on Heroku-assigned `PORT`.
+  - Socket.IO attached and listening.
+  - Permissions seeded successfully.
+  - Intelligence relay started.
+
+### Deployment Warnings
+
+- Heroku build warned that Node.js `20.20.2` is End-of-Life on Heroku and should be upgraded to a supported version soon.
+- Heroku compressed slug size was `586.1M`, which is high. Future deployment cleanup should exclude unnecessary static/generated assets and local upload samples from the Heroku slug without changing runtime behavior.
+- Redis is still not configured on Heroku because no Redis connection URL/details have been provided yet. Socket.IO/presence can run, but without shared Redis state across multiple dynos.
+
 ## Next Approval Points
 
-1. Cloud Run cost control: update `yenkasa-ai-backend` to remove `minScale=1` and restore CPU throttling, if cold starts/background workers are acceptable.
-2. Artifact Registry cleanup: list active image digests used by Cloud Run revisions, then delete only unused old images or configure a cleanup policy.
-3. Cloud SQL cost control: confirm whether `yenkasa-store-mysql` and/or `yenkasa-ai-postgres` are required 24/7 before stopping, resizing, or migrating.
-4. GenAI migration: build an Agent Search adapter behind a feature flag for YenkasaAI repo/document search, with current RAG as fallback.
+1. Redis production config: provide the Redis connection URL/details so Heroku can use shared Socket.IO/presence state instead of in-memory state.
+2. Cloud SQL cost control: confirm whether `yenkasa-store-mysql` and/or `yenkasa-ai-postgres` are required 24/7 before stopping, resizing, or migrating.
+3. Heroku slug cleanup: exclude unnecessary generated/static/sample-upload assets from the Heroku deployment source.
+4. Node runtime upgrade: move backend Heroku runtime from Node `20.x` to a Heroku-supported active version after compatibility validation.
+5. Artifact Registry cleanup: list active image digests used by Cloud Run revisions, then delete only unused old images or configure a cleanup policy.
+6. GenAI migration: build an Agent Search adapter behind a feature flag for YenkasaAI repo/document search, with current RAG as fallback.

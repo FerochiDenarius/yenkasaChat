@@ -1,7 +1,7 @@
 {
   "name": "yenkasa-backend-backup",
   "description": "Yenkasa backend tertiary backup runtime for Heroku.",
-  "stack": "heroku-22",
+  "stack": "heroku-24",
   "formation": {
     "web": {
       "quantity": 1,
@@ -19,9 +19,6 @@
   "env": {
     "NODE_ENV": {
       "value": "production"
-    },
-    "PORT": {
-      "value": "8080"
     },
     "MONGODB_URI": {
       "required": true

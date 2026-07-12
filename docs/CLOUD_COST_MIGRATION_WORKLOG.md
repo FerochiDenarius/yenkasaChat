@@ -322,13 +322,86 @@ The first deploy attempt used `git subtree push` from the monorepo and stalled d
 
 - Heroku build warned that Node.js `20.20.2` is End-of-Life on Heroku and should be upgraded to a supported version soon.
 - Heroku compressed slug size was `586.1M`, which is high. Future deployment cleanup should exclude unnecessary static/generated assets and local upload samples from the Heroku slug without changing runtime behavior.
-- Redis is still not configured on Heroku because no Redis connection URL/details have been provided yet. Socket.IO/presence can run, but without shared Redis state across multiple dynos.
+- Redis was not configured at initial deployment time. It was configured later in Stage 11.
+
+## Stage 11 - Redis Production Config And GCP Scale Verification
+
+### Redis Source
+
+Redis details were found without printing secret values:
+
+- Local YenkasaAI env path checked: `/Users/kofibright/Desktop/yenkasa-ai/backend/.env`
+- Local env contains `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
+- Local env does not contain a socket-style `REDIS_URL`.
+- Google Secret Manager contains secret `YENKASA_AI_REDIS_URL`.
+- Cloud Run service `yenkasa-ai-backend` already consumes `YENKASA_AI_REDIS_URL` as `REDIS_URL`.
+
+### Redis Connectivity Validation
+
+Validated the Secret Manager Redis URL without printing it:
+
+- Scheme: `rediss`
+- Host: set
+- Port: `6379`
+- Redis `PING`: successful
+
+### Heroku Action
+
+Configured Heroku app `yenkasa-backend-backup` with Redis-specific variables:
+
+- `YENKASA_SOCKET_REDIS_URL`
+- `YENKASA_PRESENCE_REDIS_URL`
+- `YENKASA_PRESENCE_REDIS_PREFIX=yenkasa:presence:heroku`
+- `YENKASA_YME_QUEUE_PREFIX=yenkasa:yme:heroku`
+
+Deliberately did not set generic `REDIS_URL` on Heroku. This keeps the Heroku Node backend from accidentally enabling generic Redis/BullMQ paths beyond the explicit Socket.IO/presence integration. Existing Heroku config keeps inline YME and moderation workers disabled:
+
+- `YENKASA_ENABLE_INLINE_YME_WORKERS=false`
+- `YENKASA_ENABLE_INLINE_MODERATION_WORKERS=false`
+
+### Validation
+
+- Heroku config verification shows both Redis URL variables are set.
+- Heroku restarted `web.1` after config change.
+- `heroku ps --app yenkasa-backend-backup`: `web.1` is up.
+- `curl -i https://api.yenkasa.xyz/health`: returned HTTP `200`.
+- Heroku logs show `[Socket.IO] Redis adapter enabled.`
+- Heroku logs show Socket.IO attached and listening.
+- No Redis startup error was observed in the checked logs.
+
+### YCA / YenkasaAI Boundary
+
+No YCA behavior was changed in this stage.
+
+Redis key spaces remain separated:
+
+- YenkasaAI/YCA knowledge graph cache uses `yca:kg:*`.
+- Heroku Yenkasa presence uses `yenkasa:presence:heroku:*`.
+- Heroku YME queue prefix is explicitly set to `yenkasa:yme:heroku`, but inline YME workers remain disabled on Heroku.
+
+This means the Redis production config supports the Heroku backend without overwriting YCA/YenkasaAI cache keys.
+
+### GCP Scale-To-Zero Verification
+
+Verified Cloud Run min scale after the previous cost-control stage:
+
+| Service | Region | Min scale | Max scale | Ready |
+|---|---:|---:|---:|---:|
+| `yenkasa-ai` | `europe-west1` | unset/0 | 10 | true |
+| `yenkasa-ai-backend` | `europe-west1` | unset/0 | 5 | true |
+| `yenkasa-chat-backend-backup` | `europe-west1` | unset/0 | 2 | true |
+| `yenkasa-code-agent` | `europe-west1` | unset/0 | 5 | true |
+
+Cloud Run can now scale to zero when idle. Cloud SQL is separate and was not stopped in this stage.
+
+### GenAI Credit Note
+
+YenkasaAI remains on Google Cloud and still has the Google/Vertex/Gemini runtime settings. However, simply calling Gemini/Vertex is not the same as consuming GenAI App Builder / Agent Search promotional credits. The next GenAI-specific migration should move YenkasaAI repo/document search behind an Agent Search / Discovery Engine feature flag while keeping the current RAG path as fallback. That work should target YenkasaAI, not YCA production behavior.
 
 ## Next Approval Points
 
-1. Redis production config: provide the Redis connection URL/details so Heroku can use shared Socket.IO/presence state instead of in-memory state.
-2. Cloud SQL cost control: confirm whether `yenkasa-store-mysql` and/or `yenkasa-ai-postgres` are required 24/7 before stopping, resizing, or migrating.
-3. Heroku slug cleanup: exclude unnecessary generated/static/sample-upload assets from the Heroku deployment source.
-4. Node runtime upgrade: move backend Heroku runtime from Node `20.x` to a Heroku-supported active version after compatibility validation.
-5. Artifact Registry cleanup: list active image digests used by Cloud Run revisions, then delete only unused old images or configure a cleanup policy.
-6. GenAI migration: build an Agent Search adapter behind a feature flag for YenkasaAI repo/document search, with current RAG as fallback.
+1. Cloud SQL cost control: confirm whether `yenkasa-store-mysql` and/or `yenkasa-ai-postgres` are required 24/7 before stopping, resizing, or migrating.
+2. Heroku slug cleanup: exclude unnecessary generated/static/sample-upload assets from the Heroku deployment source.
+3. Node runtime upgrade: move backend Heroku runtime from Node `20.x` to a Heroku-supported active version after compatibility validation.
+4. Artifact Registry cleanup: list active image digests used by Cloud Run revisions, then delete only unused old images or configure a cleanup policy.
+5. GenAI migration: build an Agent Search adapter behind a feature flag for YenkasaAI repo/document search, with current RAG as fallback and without changing YCA production behavior.

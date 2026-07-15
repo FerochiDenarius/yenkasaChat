@@ -398,10 +398,79 @@ Cloud Run can now scale to zero when idle. Cloud SQL is separate and was not sto
 
 YenkasaAI remains on Google Cloud and still has the Google/Vertex/Gemini runtime settings. However, simply calling Gemini/Vertex is not the same as consuming GenAI App Builder / Agent Search promotional credits. The next GenAI-specific migration should move YenkasaAI repo/document search behind an Agent Search / Discovery Engine feature flag while keeping the current RAG path as fallback. That work should target YenkasaAI, not YCA production behavior.
 
+## Stage 12 - Emergency GCP And Runtime Shutdown
+
+Date: 2026-07-15
+
+### Reason
+
+Owner requested deactivation of the YenkasaAi Google Cloud project because the project was creating cost that could not be paid.
+
+### Cloud SQL Action
+
+Stopped both always-on Cloud SQL instances by changing activation policy to `NEVER`:
+
+- `yenkasa-ai-postgres`
+- `yenkasa-store-mysql`
+
+### Cloud SQL Validation
+
+Verified after patching:
+
+| Instance | Status | Activation policy |
+|---|---:|---:|
+| `yenkasa-ai-postgres` | STOPPED | NEVER |
+| `yenkasa-store-mysql` | STOPPED | NEVER |
+
+### Google Cloud Project Action
+
+Shut down the Google Cloud project:
+
+- Project ID: `project-10405180-0afd-4ecc-9f8`
+- Project name: `YenkasaAi`
+- Result: project delete/deactivation request accepted
+
+Google Cloud reported the project can be restored for a limited period with:
+
+```bash
+gcloud projects undelete project-10405180-0afd-4ecc-9f8
+```
+
+### Google Cloud Project Validation
+
+Verified project lifecycle state:
+
+| Project ID | Name | Lifecycle state |
+|---|---:|---:|
+| `project-10405180-0afd-4ecc-9f8` | YenkasaAi | DELETE_REQUESTED |
+
+### Heroku Runtime Action
+
+Scaled the Heroku backend migration app to zero dynos to avoid Heroku runtime cost:
+
+- App: `yenkasa-backend-backup`
+- `web=0`
+- `worker_moderation=0`
+- `worker_yme=0`
+
+The separate `yenkasa-caller` Heroku app was not changed because it predates this migration and appears to be a separate caller/video app.
+
+### Heroku Validation
+
+Verified Heroku reports:
+
+- `No dynos on yenkasa-backend-backup`
+
+### Expected Impact
+
+- YenkasaAI services hosted in Google Cloud are deactivated by the project shutdown.
+- Cloud SQL compute is stopped.
+- Heroku backup backend is offline.
+- `api.yenkasa.xyz` should not be expected to serve traffic from `yenkasa-backend-backup` while dynos are scaled to zero.
+- Project recovery is time-limited and requires running the Google Cloud undelete command above before Google permanently deletes the project.
+
 ## Next Approval Points
 
-1. Cloud SQL cost control: confirm whether `yenkasa-store-mysql` and/or `yenkasa-ai-postgres` are required 24/7 before stopping, resizing, or migrating.
-2. Heroku slug cleanup: exclude unnecessary generated/static/sample-upload assets from the Heroku deployment source.
-3. Node runtime upgrade: move backend Heroku runtime from Node `20.x` to a Heroku-supported active version after compatibility validation.
-4. Artifact Registry cleanup: list active image digests used by Cloud Run revisions, then delete only unused old images or configure a cleanup policy.
-5. GenAI migration: build an Agent Search adapter behind a feature flag for YenkasaAI repo/document search, with current RAG as fallback and without changing YCA production behavior.
+1. If recovery is needed, run `gcloud projects undelete project-10405180-0afd-4ecc-9f8` during Google's limited recovery window.
+2. If Heroku backend recovery is needed, scale `yenkasa-backend-backup` web dyno back above zero and validate `/health`.
+3. Review billing after shutdown to confirm no unexpected Google Cloud or Heroku charges remain.

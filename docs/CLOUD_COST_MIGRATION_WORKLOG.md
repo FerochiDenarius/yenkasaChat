@@ -469,8 +469,58 @@ Verified Heroku reports:
 - `api.yenkasa.xyz` should not be expected to serve traffic from `yenkasa-backend-backup` while dynos are scaled to zero.
 - Project recovery is time-limited and requires running the Google Cloud undelete command above before Google permanently deletes the project.
 
+## Stage 13 - Emergency Site Restore After GCP Shutdown
+
+Date: 2026-07-16
+
+### Reason
+
+Owner reported that `yenkasa.xyz` and `yenkasa.xyz/store` were down after the GCP project shutdown.
+
+### Finding
+
+- `yenkasa.xyz` was still returning `503` from Google Frontend, meaning the apex domain was still routed to Google.
+- `www.yenkasa.xyz` and `api.yenkasa.xyz` were routed to Heroku, but `yenkasa-backend-backup` had been scaled to zero during Stage 12.
+- Heroku custom domains already included `www.yenkasa.xyz` and `api.yenkasa.xyz`.
+
+### Action
+
+Restored Heroku runtime:
+
+- App: `yenkasa-backend-backup`
+- `web=1`
+
+Added the apex domain to Heroku:
+
+- Domain: `yenkasa.xyz`
+- Heroku DNS target: `asymmetrical-barosaurus-emm6339fcbu39s26daujhna9.herokudns.com`
+- Heroku DNS record type: `ALIAS or ANAME`
+- SNI endpoint: `diplodocus-72630`
+
+### Validation
+
+Validated after Heroku scale-up:
+
+- `https://www.yenkasa.xyz/`: HTTP `200`
+- `https://www.yenkasa.xyz/store`: HTTP `200`
+- `https://api.yenkasa.xyz/health`: HTTP `200`
+
+Still pending manual DNS change:
+
+- `https://yenkasa.xyz`: still returns `503` from Google Frontend until the apex DNS record is changed away from Google.
+
+### Manual DNS Task
+
+In Cloudflare DNS for `yenkasa.xyz`, remove or replace the current apex/root record that points to Google and create:
+
+| Type | Name | Target | Proxy |
+|---|---|---|---|
+| `CNAME` | `@` | `asymmetrical-barosaurus-emm6339fcbu39s26daujhna9.herokudns.com` | DNS-only first |
+
+Cloudflare supports CNAME flattening at the apex, so this `CNAME @` is the practical Cloudflare equivalent of Heroku's requested `ALIAS or ANAME`.
+
 ## Next Approval Points
 
-1. If recovery is needed, run `gcloud projects undelete project-10405180-0afd-4ecc-9f8` during Google's limited recovery window.
-2. If Heroku backend recovery is needed, scale `yenkasa-backend-backup` web dyno back above zero and validate `/health`.
-3. Review billing after shutdown to confirm no unexpected Google Cloud or Heroku charges remain.
+1. Update Cloudflare apex DNS for `yenkasa.xyz` to the Heroku target above.
+2. After DNS propagation, validate `https://yenkasa.xyz` and `https://yenkasa.xyz/store`.
+3. Review billing after Heroku restore because `yenkasa-backend-backup` is running one Basic web dyno again.

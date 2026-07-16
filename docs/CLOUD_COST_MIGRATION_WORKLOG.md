@@ -509,6 +509,40 @@ Still pending manual DNS change:
 
 - `https://yenkasa.xyz`: still returns `503` from Google Frontend until the apex DNS record is changed away from Google.
 
+### Follow-Up Heroku Config Fix
+
+After restore, Heroku logs showed the backend was still attempting to call the deleted Google Cloud YenkasaAI backend:
+
+- `YENKASA_AI_ENGINE_URL=https://yenkasa-ai-backend-3vx2nvls4a-ew.a.run.app`
+- Event relay target: `/api/events/ingest`
+- Failure: `Event ingest failed with status 503`
+
+Disabled the Heroku features that depend on the deleted YenkasaAI Cloud Run service:
+
+- `YENKASA_AI_EVENT_RELAY_ENABLED=false`
+- `SOFTOTECH_AI_INGESTION_ENABLED=false`
+
+Validation after restart:
+
+- Heroku logs show `Intelligence event relay disabled by configuration`.
+- `https://www.yenkasa.xyz/store`: HTTP `200`
+- `https://api.yenkasa.xyz/health`: HTTP `200`
+
+### Current Storage State
+
+Live Heroku storage configuration after GCP shutdown:
+
+- `MEDIA_STORAGE_PROVIDER=gcs`
+- `GCS_MEDIA_BUCKET=yenkasa-media`
+- `GOOGLE_CLOUD_PROJECT=project-10405180-0afd-4ecc-9f8`
+- `GCS_MAKE_PUBLIC=false`
+- Cloudinary credentials are present.
+- `MEDIA_STORAGE_CLOUDINARY_FALLBACK=false`
+
+Risk: media uploads are still configured to use Google Cloud Storage in the deleted/deactivated GCP project. Upload paths can fail until storage is moved to a live provider such as Cloudinary or Cloudflare R2.
+
+The current backend media abstraction supports `gcs` and `cloudinary`. Cloudflare R2 is S3-compatible, so R2 support requires either adding an S3/R2 provider to `services/mediaStorage.service.js` or temporarily switching `MEDIA_STORAGE_PROVIDER=cloudinary` if Cloudinary remains acceptable.
+
 ### Manual DNS Task
 
 In Cloudflare DNS for `yenkasa.xyz`, remove or replace the current apex/root record that points to Google and create:

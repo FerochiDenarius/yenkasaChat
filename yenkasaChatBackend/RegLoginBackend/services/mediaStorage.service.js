@@ -10,6 +10,7 @@ const DEFAULT_GCS_PROXY_UPLOAD_URL = 'https://yenkasa-chat-backend-backup-496173
 const PROVIDERS = {
   GCS: 'gcs',
   CLOUDINARY: 'cloudinary',
+  R2: 'r2',
 };
 
 const BUCKET_FOLDERS = {
@@ -32,13 +33,52 @@ function gcsBucketName() {
   return process.env.GCS_MEDIA_BUCKET || process.env.GOOGLE_CLOUD_STORAGE_BUCKET || DEFAULT_BUCKET;
 }
 
-function publicBaseUrl() {
+function gcsPublicBaseUrl() {
   return String(process.env.GCS_PUBLIC_BASE_URL || `https://storage.googleapis.com/${gcsBucketName()}`)
     .replace(/\/+$/, '');
 }
 
+function r2BucketName() {
+  return process.env.R2_MEDIA_BUCKET || process.env.CLOUDFLARE_R2_BUCKET || process.env.R2_BUCKET;
+}
+
+function r2Endpoint() {
+  const configured = process.env.R2_ENDPOINT || process.env.CLOUDFLARE_R2_ENDPOINT;
+  if (configured) return String(configured).replace(/\/+$/, '');
+
+  const accountId = process.env.R2_ACCOUNT_ID || process.env.CLOUDFLARE_ACCOUNT_ID;
+  if (!accountId) return '';
+
+  const jurisdiction = String(process.env.R2_JURISDICTION || '').trim().toLowerCase();
+  const host = jurisdiction === 'eu'
+    ? `${accountId}.eu.r2.cloudflarestorage.com`
+    : `${accountId}.r2.cloudflarestorage.com`;
+  return `https://${host}`;
+}
+
+function r2PublicBaseUrl() {
+  return String(process.env.R2_PUBLIC_BASE_URL || process.env.CLOUDFLARE_R2_PUBLIC_BASE_URL || '')
+    .replace(/\/+$/, '');
+}
+
+function publicBaseUrl() {
+  return configuredProvider() === PROVIDERS.R2 && r2PublicBaseUrl()
+    ? r2PublicBaseUrl()
+    : gcsPublicBaseUrl();
+}
+
 function hasGcsConfig() {
   return Boolean(gcsBucketName());
+}
+
+function hasR2Config() {
+  return Boolean(
+    r2BucketName() &&
+    r2Endpoint() &&
+    process.env.R2_ACCESS_KEY_ID &&
+    process.env.R2_SECRET_ACCESS_KEY &&
+    r2PublicBaseUrl()
+  );
 }
 
 function runningOnGoogleRuntime() {
@@ -210,6 +250,58 @@ async function uploadToGcs(file, options = {}) {
   };
 }
 
+async function uploadToR2(file, options = {}) {
+  if (!hasR2Config()) {
+    throw new Error('Cloudflare R2 media bucket is not configured.');
+  }
+
+  let S3Client;
+  let PutObjectCommand;
+  try {
+    ({ S3Client, PutObjectCommand } = require('@aws-sdk/client-s3'));
+  } catch (error) {
+    throw new Error('@aws-sdk/client-s3 is required for Cloudflare R2 media uploads.');
+  }
+
+  const objectName = options.objectName || gcsObjectName(file, options);
+  const buffer = await fileToBuffer(file);
+  const client = new S3Client({
+    region: process.env.R2_REGION || 'auto',
+    endpoint: r2Endpoint(),
+    credentials: {
+      accessKeyId: process.env.R2_ACCESS_KEY_ID,
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+    },
+    forcePathStyle: String(process.env.R2_FORCE_PATH_STYLE || 'true').toLowerCase() === 'true',
+  });
+
+  await client.send(new PutObjectCommand({
+    Bucket: r2BucketName(),
+    Key: objectName,
+    Body: buffer,
+    ContentType: file.mimetype || options.contentType || 'application/octet-stream',
+    CacheControl: options.cacheControl || 'public, max-age=31536000, immutable',
+    Metadata: {
+      originalName: file.originalname || '',
+      area: options.area || options.folder || '',
+      provider: PROVIDERS.R2,
+    },
+  }));
+
+  const url = `${r2PublicBaseUrl()}/${encodeURI(objectName).replace(/%2F/g, '/')}`;
+  return {
+    provider: PROVIDERS.R2,
+    bucket: r2BucketName(),
+    key: objectName,
+    public_id: objectName,
+    secure_url: url,
+    url,
+    bytes: Number(file.size || buffer.length || 0),
+    resource_type: inferResourceType(file, options.type),
+    original_filename: file.originalname || '',
+  };
+}
+
 async function uploadToGcsProxy(file, options = {}) {
   const url = gcsProxyUploadUrl();
   if (!url) {
@@ -295,6 +387,17 @@ async function upload(file, options = {}) {
   if (provider === PROVIDERS.CLOUDINARY) {
     return uploadToCloudinary(file, options);
   }
+  if (provider === PROVIDERS.R2) {
+    try {
+      return await uploadToR2(file, options);
+    } catch (error) {
+      if (String(process.env.MEDIA_STORAGE_CLOUDINARY_FALLBACK || 'true').toLowerCase() === 'false') {
+        throw error;
+      }
+      console.warn('[MediaStorage] R2 upload failed; using Cloudinary fallback:', error.message);
+      return uploadToCloudinary(file, options);
+    }
+  }
 
   const proxyUrl = gcsProxyUploadUrl();
   if (proxyUrl && !runningOnGoogleRuntime()) {
@@ -327,9 +430,14 @@ module.exports = {
   gcsBucketName,
   hasCloudinaryConfig,
   hasGcsConfig,
+  hasR2Config,
   publicUrl,
+  r2BucketName,
+  r2Endpoint,
+  r2PublicBaseUrl,
   upload,
   uploadToCloudinary,
   uploadToGcs,
   uploadToGcsProxy,
+  uploadToR2,
 };

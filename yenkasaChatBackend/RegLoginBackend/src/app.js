@@ -63,6 +63,22 @@ require('../store/yenkasa-store-server')(app);
 require('../web/yenkasa-web-server')(app);
 require('../ai/yenkasa-ai-server')(app);
 
+const r2PublicBaseUrl = process.env.R2_PUBLIC_BASE_URL || process.env.CLOUDFLARE_R2_PUBLIC_BASE_URL;
+const r2PublicOrigin = (() => {
+  if (!r2PublicBaseUrl) return null;
+  try {
+    return new URL(r2PublicBaseUrl).origin;
+  } catch (error) {
+    return null;
+  }
+})();
+const mediaSources = [
+  'https://www.yenkasa.xyz',
+  'https://res.cloudinary.com',
+  'https://storage.googleapis.com',
+  ...(r2PublicOrigin ? [r2PublicOrigin] : []),
+];
+
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -74,12 +90,10 @@ app.use(
           "'self'",
           'data:',
           'blob:',
-          'https://www.yenkasa.xyz',
-          'https://res.cloudinary.com',
-          'https://storage.googleapis.com',
+          ...mediaSources,
           'https://images.unsplash.com',
         ],
-        mediaSrc: ["'self'", 'blob:', 'https://www.yenkasa.xyz', 'https://res.cloudinary.com', 'https://storage.googleapis.com'],
+        mediaSrc: ["'self'", 'blob:', ...mediaSources],
       },
     },
   }),

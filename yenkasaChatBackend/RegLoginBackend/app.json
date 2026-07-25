@@ -30,16 +30,31 @@
       "required": true
     },
     "MEDIA_STORAGE_PROVIDER": {
-      "value": "gcs"
+      "value": "r2"
     },
-    "GCS_MEDIA_BUCKET": {
+    "R2_MEDIA_BUCKET": {
       "value": "yenkasa-media"
     },
-    "GOOGLE_CLOUD_PROJECT": {
-      "value": "project-10405180-0afd-4ecc-9f8"
+    "R2_ACCOUNT_ID": {
+      "value": "0172d20a9959566ea6b2d54e1eea24e2"
     },
-    "GCS_MAKE_PUBLIC": {
-      "value": "false"
+    "R2_ENDPOINT": {
+      "value": "https://0172d20a9959566ea6b2d54e1eea24e2.r2.cloudflarestorage.com"
+    },
+    "R2_PUBLIC_BASE_URL": {
+      "value": "https://pub-22f74b409156435e960c4aa7a655e5de.r2.dev"
+    },
+    "R2_REGION": {
+      "value": "auto"
+    },
+    "R2_FORCE_PATH_STYLE": {
+      "value": "true"
+    },
+    "R2_ACCESS_KEY_ID": {
+      "required": true
+    },
+    "R2_SECRET_ACCESS_KEY": {
+      "required": true
     },
     "CLOUDINARY_CLOUD_NAME": {
       "required": true

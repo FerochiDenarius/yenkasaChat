@@ -7,6 +7,7 @@ const Community = require('../models/community.model');
 const LiveStream = require('../models/LiveStream');
 const {
   buildOptimizedImageUrl,
+  buildOptimizedVideoUrl,
   buildVideoPosterUrl
 } = require('../utils/cloudinaryMedia');
 
@@ -96,7 +97,30 @@ function optimizeImage(url, width = 1200) {
 
 function optimizeVideoPoster(url, width = 1200) {
   if (!url) return '';
-  return secureUrl(buildVideoPosterUrl(url, { width }) || url);
+  const posterUrl = buildVideoPosterUrl(url, { width });
+  if (!posterUrl || posterUrl === url) return '';
+  return secureUrl(posterUrl);
+}
+
+function optimizeVideo(url) {
+  if (!url) return '';
+  return secureUrl(buildOptimizedVideoUrl(url) || url);
+}
+
+function inferVideoMimeType(url) {
+  if (!url) return '';
+  let pathname = '';
+  try {
+    pathname = new URL(url).pathname.toLowerCase();
+  } catch (_error) {
+    pathname = String(url).toLowerCase();
+  }
+
+  if (pathname.endsWith('.webm')) return 'video/webm';
+  if (pathname.endsWith('.mov')) return 'video/quicktime';
+  if (pathname.endsWith('.m4v')) return 'video/mp4';
+  if (pathname.endsWith('.m3u8')) return 'application/x-mpegURL';
+  return 'video/mp4';
 }
 
 function fallbackImage(...candidates) {
@@ -125,6 +149,12 @@ function renderPreviewPage(res, req, preview, statusCode = 200) {
   const title = escapeHtml(preview.title || 'Yenkasa');
   const description = escapeHtml(preview.description || 'Open Yenkasa');
   const image = escapeAttr(preview.image || FALLBACK_IMAGE_URL);
+  const imageWidth = Number.parseInt(String(preview.imageWidth || 1200), 10) || 1200;
+  const imageHeight = Number.parseInt(String(preview.imageHeight || 630), 10) || 630;
+  const video = preview.video ? escapeAttr(preview.video) : '';
+  const videoType = escapeAttr(preview.videoType || inferVideoMimeType(preview.video) || 'video/mp4');
+  const videoWidth = Number.parseInt(String(preview.videoWidth || 1280), 10) || 1280;
+  const videoHeight = Number.parseInt(String(preview.videoHeight || 720), 10) || 720;
   const canonicalUrl = escapeAttr(preview.canonicalUrl || appLinkUrl);
   const androidPackage = escapeAttr(APP_PACKAGE);
   const twitterCard = preview.image ? 'summary_large_image' : 'summary';
@@ -136,13 +166,24 @@ function renderPreviewPage(res, req, preview, statusCode = 200) {
   const safeWebFallbackUrl = escapeAttr(webFallbackUrl);
   const safeAppLinkUrl = escapeAttr(appLinkUrl);
   const primaryHref = escapeAttr(preview.primaryHref || (isAndroid ? redirectTarget : appLinkUrl));
+  const mediaPreviewHtml = video
+    ? `<video controls playsinline preload="metadata" poster="${image}" aria-label="${title}"><source src="${video}" type="${videoType}"></video>`
+    : `<img src="${image}" alt="${title}">`;
+  const videoMetaTags = video
+    ? `
+    <meta property="og:video" content="${video}">
+    <meta property="og:video:secure_url" content="${video}">
+    <meta property="og:video:type" content="${videoType}">
+    <meta property="og:video:width" content="${videoWidth}">
+    <meta property="og:video:height" content="${videoHeight}">`
+    : '';
 
   res.status(statusCode);
   res.setHeader('Vary', 'User-Agent');
   res.setHeader('Cache-Control', 'public, max-age=300');
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self' https: data: blob:; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' https:; connect-src 'self' https:; font-src 'self' https: data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    "default-src 'self' https: data: blob:; img-src 'self' https: data: blob:; media-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' https:; connect-src 'self' https:; font-src 'self' https: data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
   );
 
   const refreshTag = autoRedirect
@@ -189,11 +230,16 @@ function renderPreviewPage(res, req, preview, statusCode = 200) {
     <meta property="og:description" content="${description}">
     <meta property="og:image" content="${image}">
     <meta property="og:image:secure_url" content="${image}">
+    <meta property="og:image:width" content="${imageWidth}">
+    <meta property="og:image:height" content="${imageHeight}">
+    <meta property="og:image:alt" content="${title}">
+    ${videoMetaTags}
     <meta property="og:url" content="${canonicalUrl}">
     <meta name="twitter:card" content="${twitterCard}">
     <meta name="twitter:title" content="${title}">
     <meta name="twitter:description" content="${description}">
     <meta name="twitter:image" content="${image}">
+    <meta name="twitter:image:alt" content="${title}">
     <meta property="al:android:package" content="${androidPackage}">
     <meta property="al:android:url" content="${safeAppLinkUrl}">
     <meta property="al:web:url" content="${safeWebFallbackUrl}">
@@ -221,7 +267,8 @@ function renderPreviewPage(res, req, preview, statusCode = 200) {
         overflow: hidden;
         box-shadow: 0 24px 80px rgba(15, 23, 42, 0.45);
       }
-      img {
+      img,
+      video {
         display: block;
         width: 100%;
         aspect-ratio: 16 / 9;
@@ -284,7 +331,7 @@ function renderPreviewPage(res, req, preview, statusCode = 200) {
   </head>
   <body>
     <main>
-      <img src="${image}" alt="${title}">
+      ${mediaPreviewHtml}
       <section>
         <div class="eyebrow">Yenkasa deep link</div>
         <h1>${pageHeading}</h1>
@@ -324,13 +371,26 @@ function notFoundPreview(req, kind, value) {
 
 function buildPostImage(post) {
   const firstImage = Array.isArray(post.imageUrls) ? post.imageUrls.find(Boolean) : '';
-  if (post.videoUrl) return fallbackImage(optimizeVideoPoster(post.videoUrl), optimizeImage(firstImage), optimizeImage(post.imageUrl));
+  const explicitPoster = post.thumbnailUrl || post.posterUrl || '';
+  if (post.videoUrl) {
+    return fallbackImage(
+      optimizeImage(explicitPoster),
+      optimizeVideoPoster(post.videoUrl),
+      optimizeImage(firstImage),
+      optimizeImage(post.imageUrl)
+    );
+  }
   if (firstImage || post.imageUrl) return fallbackImage(optimizeImage(firstImage), optimizeImage(post.imageUrl));
   return fallbackImage(
     optimizeImage(post.userId?.profileImage, 720),
     optimizeImage(post.communityId?.coverImage, 1200),
     optimizeImage(post.communityId?.icon, 720)
   );
+}
+
+function buildPostVideo(post) {
+  if (!post.videoUrl) return '';
+  return optimizeVideo(post.videoUrl);
 }
 
 function buildPostPreview(req, post) {
@@ -343,6 +403,7 @@ function buildPostPreview(req, post) {
   const communityName = post.communityId?.displayName || post.communityName || '';
   const caption = truncate(post.text || '', 160);
   const hasImage = Boolean(post.imageUrl) || (Array.isArray(post.imageUrls) && post.imageUrls.some(Boolean));
+  const video = buildPostVideo(post);
   const mediaType = post.videoUrl
     ? 'video'
     : post.audioUrl
@@ -365,6 +426,12 @@ function buildPostPreview(req, post) {
       : `${handle} shared this on Yenkasa.`,
     caption,
     image: buildPostImage(post),
+    imageWidth: 1200,
+    imageHeight: 630,
+    video,
+    videoType: inferVideoMimeType(video),
+    videoWidth: 1280,
+    videoHeight: 720,
     canonicalUrl,
     appLinkUrl,
     webFallbackUrl,

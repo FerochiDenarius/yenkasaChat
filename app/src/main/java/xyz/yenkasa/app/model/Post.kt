@@ -17,6 +17,8 @@ data class Post(
     val imageUrl: String? = null,
     val imageUrls: List<String>? = emptyList(),
     val videoUrl: String? = null,
+    val thumbnailUrl: String? = null,
+    val posterUrl: String? = null,
     val audioUrl: String? = null,
     val textBackgroundColor: String? = null,
     val textBackgroundImageUrl: String? = null,
@@ -78,8 +80,12 @@ data class Post(
     fun optimizedAudioUrl(): String? =
         audioUrl?.takeIf { it.isNotBlank() }
 
-    fun optimizedVideoPosterUrl(): String? =
-        CloudinaryMedia.videoPosterUrl(videoUrl?.takeIf { it.isNotBlank() }, CloudinaryMedia.WIDTH_PREVIEW)
+    fun optimizedVideoPosterUrl(): String? {
+        val storedPoster = thumbnailUrl?.takeIf { it.isNotBlank() }
+            ?: posterUrl?.takeIf { it.isNotBlank() }
+        return storedPoster?.let { CloudinaryMedia.optimizedImageUrl(it, CloudinaryMedia.WIDTH_PREVIEW) ?: it }
+            ?: CloudinaryMedia.videoPosterUrl(videoUrl?.takeIf { it.isNotBlank() }, CloudinaryMedia.WIDTH_PREVIEW)
+    }
 
     fun resolvedCommentCount(): Int {
         return when {
@@ -107,6 +113,8 @@ data class Post(
                 imageUrl = json.optString("imageUrl", null),
                 imageUrls = imageUrls,
                 videoUrl = json.optString("videoUrl", null),
+                thumbnailUrl = cleanJsonString(json, "thumbnailUrl"),
+                posterUrl = cleanJsonString(json, "posterUrl"),
                 audioUrl = json.optString("audioUrl", null),
                 textBackgroundColor = json.optString("textBackgroundColor", null),
                 textBackgroundImageUrl = json.optString("textBackgroundImageUrl", null),

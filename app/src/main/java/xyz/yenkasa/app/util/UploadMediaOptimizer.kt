@@ -2,10 +2,13 @@ package xyz.yenkasa.app.util
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
 import android.webkit.MimeTypeMap
+import com.bumptech.glide.Glide
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 
@@ -35,38 +38,39 @@ object UploadMediaOptimizer {
         maxDimension: Int,
         jpegQuality: Int
     ): File? {
+        return runBlocking {
+            withContext(Dispatchers.IO) {
+                compressImageWithGlide(context, uri, maxDimension, jpegQuality)
+            }
+        }
+    }
+
+    private fun compressImageWithGlide(
+        context: Context,
+        uri: Uri,
+        maxDimension: Int,
+        jpegQuality: Int
+    ): File? {
+        val requestManager = Glide.with(context.applicationContext)
+        val target = requestManager
+            .asBitmap()
+            .load(uri)
+            .submit(maxDimension, maxDimension)
+
         return try {
-            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            context.contentResolver.openInputStream(uri)?.use {
-                BitmapFactory.decodeStream(it, null, bounds)
-            }
-            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
-
-            var sampleSize = 1
-            while ((bounds.outWidth / sampleSize) > maxDimension || (bounds.outHeight / sampleSize) > maxDimension) {
-                sampleSize *= 2
-            }
-
-            val options = BitmapFactory.Options().apply {
-                inSampleSize = sampleSize
-                inPreferredConfig = Bitmap.Config.ARGB_8888
-            }
-
-            val bitmap = context.contentResolver.openInputStream(uri)?.use {
-                BitmapFactory.decodeStream(it, null, options)
-            } ?: return null
-
+            val bitmap = target.get()
             val outputFile = File(context.cacheDir, "upload_${System.currentTimeMillis()}.jpg")
             FileOutputStream(outputFile).use { output ->
                 bitmap.compress(Bitmap.CompressFormat.JPEG, jpegQuality.coerceIn(55, 92), output)
             }
-            bitmap.recycle()
 
             Log.d(TAG, "compressed_image bytes=${outputFile.length()} maxDimension=$maxDimension quality=$jpegQuality")
             outputFile
         } catch (error: Exception) {
             Log.w(TAG, "Image compression failed; falling back to original copy: ${error.message}")
             null
+        } finally {
+            requestManager.clear(target)
         }
     }
 

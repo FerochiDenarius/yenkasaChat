@@ -19,3 +19,24 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+-keepattributes Signature,InnerClasses,EnclosingMethod,RuntimeVisibleAnnotations,RuntimeVisibleParameterAnnotations,AnnotationDefault,Exceptions
+
+-keep class xyz.yenkasa.app.model.** { *; }
+-keep class xyz.yenkasa.app.network.** { *; }
+-keep class xyz.yenkasa.app.api.** { *; }
+-keep interface xyz.yenkasa.app.network.** { *; }
+-keep interface xyz.yenkasa.app.api.** { *; }
+
+# Retrofit inspects generic return types and HTTP annotations at runtime.
+-keep class retrofit2.** { *; }
+-keep interface retrofit2.** { *; }
+-keepclasseswithmembers interface * {
+    @retrofit2.http.* <methods>;
+}
+
+-dontwarn javax.annotation.**
+-dontwarn org.conscrypt.**
+-dontwarn org.bouncycastle.**
+-dontwarn org.openjsse.**
+-dontwarn retrofit2.**

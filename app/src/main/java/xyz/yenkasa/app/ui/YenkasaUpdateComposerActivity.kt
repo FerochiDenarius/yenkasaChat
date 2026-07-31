@@ -28,7 +28,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.content.ContextCompat
 import androidx.core.text.HtmlCompat
-import androidx.core.view.WindowCompat
 import com.bumptech.glide.Glide
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
@@ -44,6 +43,7 @@ import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.AnnouncementResponse
 import xyz.yenkasa.app.model.Community
 import xyz.yenkasa.app.network.ApiClient
+import xyz.yenkasa.app.util.EdgeToEdgeInsets
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.UploadMediaOptimizer
 import xyz.yenkasa.app.util.UploadProgressRequestBody
@@ -129,6 +129,18 @@ class YenkasaUpdateComposerActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         configureSystemBars()
         setContentView(R.layout.activity_yenkasa_update_composer)
+        EdgeToEdgeInsets.applySystemBarPadding(
+            findViewById(R.id.updateComposerScroll),
+            left = true,
+            top = true,
+            right = true
+        )
+        EdgeToEdgeInsets.applySystemBarPadding(
+            findViewById(R.id.announcementBottomBar),
+            left = true,
+            right = true,
+            bottom = true
+        )
 
         bindViews()
         configureInputs()
@@ -230,16 +242,9 @@ class YenkasaUpdateComposerActivity : AppCompatActivity() {
     }
 
     private fun configureSystemBars() {
-        val backgroundColor = getColor(R.color.menu_background)
-        window.statusBarColor = backgroundColor
-        window.navigationBarColor = backgroundColor
-
         val nightMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
         val lightBars = nightMode != Configuration.UI_MODE_NIGHT_YES
-        WindowCompat.getInsetsController(window, window.decorView).apply {
-            isAppearanceLightStatusBars = lightBars
-            isAppearanceLightNavigationBars = lightBars
-        }
+        EdgeToEdgeInsets.enableEdgeToEdge(this, lightStatusBars = lightBars, lightNavigationBars = lightBars)
     }
 
     private fun loadCommunities() {

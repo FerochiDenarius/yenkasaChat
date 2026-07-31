@@ -1330,6 +1330,67 @@
   gap: 8px;
 }
 
+.feed-live-streams {
+  display: grid;
+  gap: 10px;
+}
+
+.feed-live-stream {
+  width: 100%;
+  min-height: 72px;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  padding: 10px;
+  text-align: left;
+}
+
+.feed-live-stream img,
+.feed-live-stream > span {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: rgba(34, 212, 102, 0.18);
+}
+
+.feed-live-stream > span {
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+}
+
+.feed-live-stream strong,
+.feed-live-stream small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feed-live-stream small {
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.feed-live-stream b {
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 8px;
+  background: #ef233c;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+}
+
 .feed-live-event {
   display: flex;
   align-items: flex-start;

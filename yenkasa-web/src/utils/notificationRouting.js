@@ -31,7 +31,9 @@ export function resolveNotificationTarget(notification = {}) {
   ) {
     return targetId ? `/communities?communityId=${encodeURIComponent(targetId)}` : "/communities";
   }
-  if (targetType === "live" || targetType === "livestream" || type === "stream_started") return "/";
+  if (targetType === "live" || targetType === "livestream" || type === "stream_started") {
+    return targetId ? `/live/${targetId}` : "/live";
+  }
   if (targetType === "approval" || type === "post_approved") return "/post-approvals";
 
   const resolvedPostId = firstNotBlank(
@@ -83,7 +85,7 @@ function resolveTargetUrl(targetUrl) {
     if (path.startsWith("/post/")) return path + url.search;
     if (path.startsWith("/community/")) return path.replace(/^\/community\//, "/communities?communityId=") + url.search;
     if (path.startsWith("/communities")) return path + url.search;
-    if (path.startsWith("/live/")) return "/";
+    if (path.startsWith("/live/")) return path + url.search;
     if (path.startsWith("/profile/")) return path;
     if (path.startsWith("/chat/")) return path.replace(/^\/chat\//, "/chatrooms/");
     if (path.startsWith("/groups/")) return path.replace(/^\/groups\//, "/chatrooms/");

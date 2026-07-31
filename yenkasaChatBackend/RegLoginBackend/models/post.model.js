@@ -54,6 +54,8 @@ const postSchema = new Schema({
   imageUrl: { type: String, default: '' },
   imageUrls: [{ type: String }],
   videoUrl: { type: String, default: '' },
+  thumbnailUrl: { type: String, default: '' },
+  posterUrl: { type: String, default: '' },
   audioUrl: { type: String, default: '' },
 
   // Engagement

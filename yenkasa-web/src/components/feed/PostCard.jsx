@@ -6,6 +6,7 @@ import {
   buildAudioUrl,
   buildCanonicalPostUrl,
   buildMediaUrl,
+  buildPosterUrl,
   buildVideoUrl,
   formatRelativeTime,
   getPostCommentCount,
@@ -33,6 +34,7 @@ export default function PostCard({ post, onUpdate, detailMode = false, initialOp
   const liked = post?.likedByUser === true;
   const mediaUrl = buildMediaUrl(post);
   const videoUrl = buildVideoUrl(post);
+  const posterUrl = buildPosterUrl(post);
   const audioUrl = buildAudioUrl(post);
   const username = post?.userId?.username || post?.username || "Yenkasa User";
   const communityName =
@@ -422,7 +424,7 @@ export default function PostCard({ post, onUpdate, detailMode = false, initialOp
             <div className="feed-post-card__media feed-post-card__media--video">
               <video
                 src={videoUrl}
-                poster={mediaUrl && mediaUrl !== videoUrl ? mediaUrl : undefined}
+                poster={posterUrl && posterUrl !== videoUrl ? posterUrl : undefined}
                 controls
                 preload="metadata"
                 playsInline

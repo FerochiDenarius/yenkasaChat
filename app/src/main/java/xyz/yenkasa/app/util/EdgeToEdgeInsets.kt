@@ -1,9 +1,13 @@
 package xyz.yenkasa.app.util
 
 import android.app.Activity
+import android.graphics.Color
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
+import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -31,6 +35,26 @@ object EdgeToEdgeInsets {
             isAppearanceLightStatusBars = lightStatusBars
             isAppearanceLightNavigationBars = lightNavigationBars
         }
+    }
+
+    fun enableEdgeToEdge(
+        activity: ComponentActivity,
+        lightStatusBars: Boolean,
+        lightNavigationBars: Boolean
+    ) {
+        activity.enableEdgeToEdge(
+            statusBarStyle = if (lightStatusBars) {
+                SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+            } else {
+                SystemBarStyle.dark(Color.TRANSPARENT)
+            },
+            navigationBarStyle = if (lightNavigationBars) {
+                SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+            } else {
+                SystemBarStyle.dark(Color.TRANSPARENT)
+            }
+        )
+        setLightSystemBars(activity.window, lightStatusBars, lightNavigationBars)
     }
 
     fun hideSystemBars(window: Window) {

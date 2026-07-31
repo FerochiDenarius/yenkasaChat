@@ -3,8 +3,8 @@ package xyz.yenkasa.app.ui
 import android.app.Activity
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.graphics.Bitmap
 import android.graphics.Color
-import android.graphics.BitmapFactory
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
@@ -24,6 +24,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.target.Target
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.CreatePostResponse
 import xyz.yenkasa.app.model.Community
@@ -282,9 +286,37 @@ class PostActivity : AppCompatActivity() {
 
         when {
             imageUris.isNotEmpty() -> {
+                val firstImageUri = imageUris.first()
                 imagePreview.visibility = View.VISIBLE
-                imagePreview.setImageURI(imageUris.first())
-                resizePreview(imagePreview, readImageAspect(imageUris.first()) ?: (4f / 5f))
+                resizePreview(imagePreview, 4f / 5f)
+                Glide.with(this)
+                    .load(firstImageUri)
+                    .placeholder(R.drawable.placeholder_image)
+                    .error(R.drawable.error_image)
+                    .listener(object : RequestListener<Drawable> {
+                        override fun onLoadFailed(
+                            e: GlideException?,
+                            model: Any?,
+                            target: Target<Drawable>,
+                            isFirstResource: Boolean
+                        ): Boolean = false
+
+                        override fun onResourceReady(
+                            resource: Drawable,
+                            model: Any,
+                            target: Target<Drawable>?,
+                            dataSource: DataSource,
+                            isFirstResource: Boolean
+                        ): Boolean {
+                            val width = resource.intrinsicWidth
+                            val height = resource.intrinsicHeight
+                            if (width > 0 && height > 0) {
+                                resizePreview(imagePreview, width.toFloat() / height.toFloat())
+                            }
+                            return false
+                        }
+                    })
+                    .into(imagePreview)
                 if (imageUris.size > 1) {
                     imagePreviewCount.visibility = View.VISIBLE
                     imagePreviewCount.text = resources.getQuantityString(
@@ -310,23 +342,6 @@ class PostActivity : AppCompatActivity() {
                 audioPreview.visibility = View.VISIBLE
                 audioPreview.text = getString(R.string.audio_selected_with_name, audioUri?.lastPathSegment.orEmpty())
             }
-        }
-    }
-
-    private fun readImageAspect(uri: Uri): Float? {
-        return try {
-            contentResolver.openInputStream(uri)?.use { input ->
-                val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                BitmapFactory.decodeStream(input, null, options)
-                if (options.outWidth > 0 && options.outHeight > 0) {
-                    options.outWidth.toFloat() / options.outHeight.toFloat()
-                } else {
-                    null
-                }
-            }
-        } catch (e: Exception) {
-            Log.w("PostActivity", "Unable to read image dimensions: ${e.message}")
-            null
         }
     }
 
@@ -553,6 +568,15 @@ class PostActivity : AppCompatActivity() {
                 Toast.makeText(this, R.string.error_preparing_file_upload, Toast.LENGTH_SHORT).show()
                 setUploadFailureState(getString(R.string.error_preparing_file_upload))
                 return
+            }
+        }
+
+        if (videoUri != null) {
+            val thumbnailFile = createVideoThumbnailFile(videoUri!!)
+            if (thumbnailFile != null && thumbnailFile.length() > 0L) {
+                preparedParts.add(PreparedUploadPart("thumbnail", thumbnailFile, "image/jpeg"))
+            } else {
+                Log.w("PostActivity", "Video thumbnail generation skipped")
             }
         }
 
@@ -794,6 +818,32 @@ class PostActivity : AppCompatActivity() {
         } catch (e: IOException) {
             Log.e("PostActivity", "Failed to copy URI to file", e)
             null
+        }
+    }
+
+    private fun createVideoThumbnailFile(uri: Uri): File? {
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(this, uri)
+            val bitmap = retriever.getFrameAtTime(
+                1_000_000L,
+                MediaMetadataRetriever.OPTION_CLOSEST_SYNC
+            ) ?: retriever.frameAtTime ?: return null
+
+            val outputFile = File.createTempFile("video_thumb_", ".jpg", cacheDir)
+            outputFile.outputStream().use { output ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 82, output)
+            }
+            bitmap.recycle()
+            outputFile
+        } catch (e: Exception) {
+            Log.w("PostActivity", "Failed to generate video thumbnail", e)
+            null
+        } finally {
+            try {
+                retriever.release()
+            } catch (_: Exception) {
+            }
         }
     }
 

@@ -242,6 +242,7 @@
 }
 
 .composer-media-preview img,
+.composer-media-preview video,
 .composer-media-file {
   width: 100%;
   min-height: 112px;

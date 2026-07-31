@@ -1,0 +1,235 @@
+.live-page {
+  min-height: 100dvh;
+  background: #050806;
+  color: #f8fff9;
+  padding: max(16px, env(safe-area-inset-top)) 14px calc(92px + env(safe-area-inset-bottom));
+}
+
+.live-topbar {
+  width: min(100%, 980px);
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.live-topbar button,
+.live-actions button,
+.live-gifts button {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  border-radius: 8px;
+}
+
+.live-topbar button {
+  min-height: 40px;
+  padding: 0 14px;
+  font-weight: 800;
+}
+
+.live-directory,
+.live-watch {
+  width: min(100%, 980px);
+  margin: 0 auto;
+}
+
+.live-directory__hero {
+  padding: 18px 0 14px;
+}
+
+.live-directory__hero h1,
+.live-watch__info h1 {
+  margin: 10px 0 0;
+  letter-spacing: 0;
+}
+
+.live-directory__hero h1 {
+  font-size: 28px;
+}
+
+.live-stream-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.live-stream-card {
+  position: relative;
+  min-height: 260px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  padding: 14px;
+  background: #0d1510;
+  color: #fff;
+  text-align: left;
+}
+
+.live-stream-card img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.62;
+}
+
+.live-stream-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 20%, rgba(0, 0, 0, 0.86));
+}
+
+.live-stream-card strong,
+.live-stream-card small,
+.live-stream-card .live-pill {
+  position: relative;
+  z-index: 1;
+}
+
+.live-stream-card strong {
+  display: block;
+  margin-top: 164px;
+  font-size: 18px;
+}
+
+.live-stream-card small {
+  display: block;
+  margin-top: 6px;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.live-watch {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.8fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.live-watch__stage,
+.live-watch__info,
+.live-state {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.live-watch__stage {
+  min-height: min(72dvh, 680px);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.live-agora-video {
+  width: 100%;
+  height: 100%;
+  min-height: min(72dvh, 680px);
+  background: #000;
+}
+
+.live-watch__info {
+  padding: 16px;
+}
+
+.live-host-row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.live-host-row img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 999px;
+  background: #122016;
+}
+
+.live-host-row strong,
+.live-host-row span {
+  display: block;
+}
+
+.live-host-row span,
+.live-stats,
+.live-status-line {
+  color: rgba(248, 255, 249, 0.72);
+}
+
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: max-content;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: #ef233c;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.live-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+  font-size: 13px;
+}
+
+.live-actions,
+.live-gifts {
+  display: grid;
+  gap: 8px;
+}
+
+.live-actions {
+  grid-template-columns: 1fr 1fr;
+  margin-top: 14px;
+}
+
+.live-actions button,
+.live-gifts button {
+  min-height: 44px;
+  padding: 0 12px;
+  font-weight: 800;
+}
+
+.live-gifts {
+  grid-template-columns: 1fr 1fr;
+  margin-top: 14px;
+}
+
+.live-gifts button {
+  display: grid;
+  place-items: center;
+}
+
+.live-gifts span {
+  color: rgba(248, 255, 249, 0.64);
+  font-size: 12px;
+}
+
+.live-state {
+  width: min(100%, 420px);
+  padding: 18px;
+  text-align: center;
+  color: rgba(248, 255, 249, 0.78);
+}
+
+@media (max-width: 760px) {
+  .live-watch {
+    grid-template-columns: 1fr;
+  }
+
+  .live-watch__stage,
+  .live-agora-video {
+    min-height: 58dvh;
+  }
+}

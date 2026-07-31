@@ -15,7 +15,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import androidx.core.view.WindowCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
@@ -34,6 +33,7 @@ import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import xyz.yenkasa.app.util.EdgeToEdgeInsets
 import xyz.yenkasa.app.util.NotificationNavigation
 import xyz.yenkasa.app.util.NotificationSoundManager
 
@@ -64,6 +64,12 @@ class UserNotificationsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         configureSystemBars()
         setContentView(R.layout.activity_user_notifications)
+        EdgeToEdgeInsets.applySystemBarPadding(
+            findViewById(R.id.notificationsRoot),
+            left = true,
+            top = true,
+            right = true
+        )
 
         TokenManager.getUserId(this)?.let { SocketManager.ensureConnected(it) }
 
@@ -74,6 +80,7 @@ class UserNotificationsActivity : AppCompatActivity() {
         chipGroupFilters = findViewById(R.id.chipGroupNotificationFilters)
         swipeNotifications = findViewById(R.id.swipeNotifications)
         rvNotifications.layoutManager = LinearLayoutManager(this)
+        EdgeToEdgeInsets.applyRecyclerBottomInset(rvNotifications)
         swipeNotifications.setColorSchemeResources(R.color.notification_badge_text)
 
         adapter = NotificationAdapter(
@@ -100,16 +107,9 @@ class UserNotificationsActivity : AppCompatActivity() {
     }
 
     private fun configureSystemBars() {
-        val backgroundColor = ContextCompat.getColor(this, R.color.notification_page_background)
-        window.statusBarColor = backgroundColor
-        window.navigationBarColor = backgroundColor
-
         val nightMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
         val lightBars = nightMode != Configuration.UI_MODE_NIGHT_YES
-        WindowCompat.getInsetsController(window, window.decorView).apply {
-            isAppearanceLightStatusBars = lightBars
-            isAppearanceLightNavigationBars = lightBars
-        }
+        EdgeToEdgeInsets.enableEdgeToEdge(this, lightStatusBars = lightBars, lightNavigationBars = lightBars)
     }
 
     override fun onDestroy() {

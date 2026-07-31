@@ -30,9 +30,7 @@ class PostPreviewActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
-        window.statusBarColor = android.graphics.Color.BLACK
-        window.navigationBarColor = android.graphics.Color.BLACK
-        EdgeToEdgeInsets.setLightSystemBars(window, lightStatusBars = false, lightNavigationBars = false)
+        EdgeToEdgeInsets.enableEdgeToEdge(this, lightStatusBars = false, lightNavigationBars = false)
         setContentView(R.layout.activity_post_preview)
 
         // === Bind views ===

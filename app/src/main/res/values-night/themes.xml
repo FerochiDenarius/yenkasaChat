@@ -17,8 +17,6 @@
         <item name="colorOnSurface">@color/on_surface</item>
         <item name="android:textCursorDrawable">@drawable/cursor_color</item>
         <item name="android:windowBackground">?attr/colorSurface</item>
-        <item name="android:statusBarColor">@color/yenkasa_black</item>
-        <item name="android:navigationBarColor">@color/surface_dark</item>
         <item name="materialButtonStyle">@style/YenkasaButton</item>
         <item name="android:buttonStyle">@style/YenkasaFrameworkButton</item>
         <item name="alertDialogTheme">@style/YenkasaAlertDialog</item>
@@ -27,8 +25,6 @@
 
     <style name="Theme.Yenkasa.Splash" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowBackground">@color/black</item>
-        <item name="android:statusBarColor">@color/black</item>
-        <item name="android:navigationBarColor">@color/black</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowActionBar">false</item>
     </style>

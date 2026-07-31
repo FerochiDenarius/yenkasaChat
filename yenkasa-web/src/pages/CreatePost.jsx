@@ -214,9 +214,19 @@ export default function CreatePost() {
                     key={item.url}
                     onError={handleDynamicImageError}
                   />
+                ) : item.type.startsWith("video/") ? (
+                  <video
+                    src={item.url}
+                    key={item.url}
+                    controls
+                    muted
+                    playsInline
+                    preload="metadata"
+                    aria-label={item.name}
+                  />
                 ) : (
                   <div className="composer-media-file" key={item.url}>
-                    <span>{item.type.startsWith("video/") ? "▶" : "♪"}</span>
+                    <span>♪</span>
                     <strong>{item.name}</strong>
                   </div>
                 )

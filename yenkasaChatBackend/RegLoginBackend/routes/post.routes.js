@@ -328,6 +328,8 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
     let imageUrl = '';
     let imageUrls = [];
     let videoUrl = '';
+    let thumbnailUrl = '';
+    let posterUrl = '';
     let audioUrl = '';
     let detectedPostType = postType || 'text';
 
@@ -337,6 +339,7 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
       (legacyMediaFile?.mimetype?.startsWith("video") ? legacyMediaFile : null);
     const audioFile = req.files?.audioUrl?.[0] ||
       (legacyMediaFile?.mimetype?.startsWith("audio") ? legacyMediaFile : null);
+    const thumbnailFile = req.files?.thumbnail?.[0] || req.files?.poster?.[0] || null;
     const legacyImageFile = !videoFile && !audioFile && legacyMediaFile?.mimetype?.startsWith("image")
       ? legacyMediaFile
       : null;
@@ -378,6 +381,17 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
       }
     }
 
+    if (videoUrl && thumbnailFile?.mimetype?.startsWith("image/")) {
+      const thumbnailUpload = await mediaStorage.upload(thumbnailFile, {
+        folder: "posts",
+        type: "image",
+        area: "post_video_thumbnail",
+      });
+      logUploadAudit({ area: "post_video_thumbnail", file: thumbnailFile, result: thumbnailUpload });
+      thumbnailUrl = thumbnailUpload.secure_url || "";
+      posterUrl = thumbnailUrl;
+    }
+
     const hasUploadedMedia = imageUrls.length > 0 || videoUrl || audioUrl;
     const textOnlyBackgroundColor = !hasUploadedMedia && text?.trim()
       ? normalizeTextBackgroundColor(textBackgroundColor)
@@ -417,6 +431,8 @@ router.post('/', authMiddleware, uploadFiles(), async (req, res) => {
       imageUrl,
       imageUrls,
       videoUrl,
+      thumbnailUrl,
+      posterUrl,
       audioUrl,
       postType: detectedPostType,
       tags: normalizedTags,
@@ -1098,6 +1114,8 @@ router.get("/:postId/download", authMiddleware, async (req, res) => {
         imageUrl: post.imageUrl || null,
         imageUrls: post.imageUrls || [],
         videoUrl: post.videoUrl || null,
+        thumbnailUrl: post.thumbnailUrl || post.posterUrl || null,
+        posterUrl: post.posterUrl || post.thumbnailUrl || null,
         audioUrl: post.audioUrl || null
       }
     });

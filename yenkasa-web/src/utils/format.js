@@ -11,6 +11,7 @@ export function buildMediaUrl(item) {
   return (
     item?.imageUrl ||
     item?.thumbnailUrl ||
+    item?.posterUrl ||
     item?.coverImage ||
     item?.mediaUrl ||
     item?.thumbnail ||
@@ -26,6 +27,18 @@ export function buildVideoUrl(item) {
 
 export function buildAudioUrl(item) {
   return item?.audioUrl || item?.audio || null;
+}
+
+export function buildPosterUrl(item) {
+  return (
+    item?.thumbnailUrl ||
+    item?.posterUrl ||
+    item?.videoThumbnail ||
+    item?.thumbnail ||
+    item?.imageUrl ||
+    item?.coverImage ||
+    null
+  );
 }
 
 export function formatRelativeTime(value) {
@@ -57,7 +70,7 @@ export function getPostCommentCount(post) {
 
 export function buildCanonicalPostUrl(postId) {
   const id = String(postId || "").trim();
-  return id ? `https://www.yenkasa.xyz/web/post/${id}` : "https://www.yenkasa.xyz/web";
+  return id ? `https://www.yenkasa.xyz/post/${id}` : "https://www.yenkasa.xyz/web";
 }
 
 export function readableRank(rank) {

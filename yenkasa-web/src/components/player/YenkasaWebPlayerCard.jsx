@@ -5,6 +5,7 @@ import {
   buildAudioUrl,
   buildCanonicalPostUrl,
   buildMediaUrl,
+  buildPosterUrl,
   buildVideoUrl,
   formatRelativeTime,
 } from "../../utils/format";
@@ -24,6 +25,7 @@ export default function YenkasaWebPlayerCard({ post, active, onUpdate }) {
 
   const mediaUrl = buildMediaUrl(post);
   const videoUrl = buildVideoUrl(post);
+  const posterUrl = buildPosterUrl(post);
   const audioUrl = buildAudioUrl(post);
   const postType = String(post?.postType || post?.type || "").toLowerCase();
   const isVideo = Boolean(videoUrl) || postType === "video";
@@ -174,7 +176,7 @@ export default function YenkasaWebPlayerCard({ post, active, onUpdate }) {
           <video
             ref={mediaRef}
             src={source}
-            poster={mediaUrl && mediaUrl !== videoUrl ? mediaUrl : undefined}
+            poster={posterUrl && posterUrl !== videoUrl ? posterUrl : undefined}
             playsInline
             loop
             muted

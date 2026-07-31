@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/updateComposerRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/menu_background">
 
     <ScrollView
+        android:id="@+id/updateComposerScroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@id/announcementBottomBar"

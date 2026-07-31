@@ -17,6 +17,8 @@ function uploadFiles() {
   return multer({ storage, fileFilter }).fields([
     { name: "imageUrl", maxCount: 10 },
     { name: "videoUrl", maxCount: 1 },
+    { name: "thumbnail", maxCount: 1 },
+    { name: "poster", maxCount: 1 },
     { name: "audioUrl", maxCount: 1 },
     { name: "media", maxCount: 1 },
   ]);

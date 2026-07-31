@@ -10,15 +10,15 @@ plugins {
 android {
     namespace = "xyz.yenkasa.app"
 
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = "28.2.13676358"
 
     defaultConfig {
         applicationId = "xyz.yenkasa.app"
         minSdk = 21
-        targetSdk = 35
-        versionCode = 65
-        versionName = "5.8"
+        targetSdk = 36
+        versionCode = 66
+        versionName = "5.9"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
@@ -55,7 +55,12 @@ android {
 
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
             signingConfig = signingConfigs.getByName("release")
         }
     }
@@ -85,7 +90,7 @@ dependencies {
 
     implementation("androidx.core:core-ktx:1.16.0")
     implementation("androidx.appcompat:appcompat:1.7.1")
-    implementation("com.google.android.material:material:1.12.0")
+    implementation("com.google.android.material:material:1.13.0")
     implementation("androidx.activity:activity-ktx:1.10.1")
     implementation("androidx.activity:activity-compose:1.10.1")
     implementation("androidx.constraintlayout:constraintlayout:2.2.1")
@@ -95,7 +100,7 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.9.1")
 
     implementation("com.github.chrisbanes:PhotoView:2.3.0")
-    implementation("com.github.yalantis:ucrop:2.2.8")
+    implementation("com.github.yalantis:ucrop:2.2.11")
     implementation("com.burhanrashid52:photoeditor:3.0.2")
     implementation("com.onesignal:OneSignal:4.8.6")
     implementation("de.hdodenhof:circleimageview:3.1.0")
@@ -176,7 +181,7 @@ dependencies {
 
     configurations.all {
         resolutionStrategy {
-            force("com.google.android.material:material:1.12.0")
+            force("com.google.android.material:material:1.13.0")
             force("com.facebook.soloader:soloader:0.12.1")
             force("com.facebook.soloader:nativeloader:0.12.1")
         }

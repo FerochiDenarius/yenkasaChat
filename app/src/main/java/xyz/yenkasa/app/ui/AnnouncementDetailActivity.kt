@@ -15,7 +15,6 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.text.HtmlCompat
-import androidx.core.view.WindowCompat
 import com.bumptech.glide.Glide
 import retrofit2.Call
 import retrofit2.Callback
@@ -27,6 +26,7 @@ import xyz.yenkasa.app.model.AnnouncementReactionResponse
 import xyz.yenkasa.app.model.AnnouncementResponse
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.AppLinkManager
+import xyz.yenkasa.app.util.EdgeToEdgeInsets
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -52,6 +52,16 @@ class AnnouncementDetailActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         configureSystemBars()
         setContentView(R.layout.activity_announcement_detail)
+        EdgeToEdgeInsets.applySystemBarPadding(
+            findViewById(R.id.announcementDetailRoot),
+            left = true,
+            top = true,
+            right = true
+        )
+        EdgeToEdgeInsets.applySystemBarPadding(
+            findViewById(R.id.announcementDetailScroll),
+            bottom = true
+        )
 
         announcementId = intent.getStringExtra("ANNOUNCEMENT_ID").orEmpty()
         if (announcementId.isBlank()) {
@@ -84,16 +94,9 @@ class AnnouncementDetailActivity : AppCompatActivity() {
     }
 
     private fun configureSystemBars() {
-        val backgroundColor = ContextCompat.getColor(this, R.color.notification_page_background)
-        window.statusBarColor = backgroundColor
-        window.navigationBarColor = backgroundColor
-
         val nightMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
         val lightBars = nightMode != Configuration.UI_MODE_NIGHT_YES
-        WindowCompat.getInsetsController(window, window.decorView).apply {
-            isAppearanceLightStatusBars = lightBars
-            isAppearanceLightNavigationBars = lightBars
-        }
+        EdgeToEdgeInsets.enableEdgeToEdge(this, lightStatusBars = lightBars, lightNavigationBars = lightBars)
     }
 
     private fun loadAnnouncement() {

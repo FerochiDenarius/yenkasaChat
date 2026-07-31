@@ -17,6 +17,7 @@ import ChatPage from "./pages/ChatPage";
 import Settings from "./pages/Settings";
 import PostApprovals from "./pages/PostApprovals";
 import AdminEconomy from "./pages/AdminEconomy";
+import LiveStream from "./pages/LiveStream";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import Backdrop from "./components/layout/Backdrop";
 import SideDrawer from "./components/layout/SideDrawer";
@@ -123,6 +124,22 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Notifications />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/live"
+          element={
+            <ProtectedRoute>
+              <LiveStream />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/live/:streamId"
+          element={
+            <ProtectedRoute>
+              <LiveStream />
             </ProtectedRoute>
           }
         />

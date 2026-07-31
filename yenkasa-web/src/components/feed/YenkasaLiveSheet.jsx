@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { createLiveDuel, getLiveMetrics, joinLiveDuel } from "../../api/live";
+import { useNavigate } from "react-router-dom";
+import { createLiveDuel, getActiveLivestreams, getLiveMetrics, joinLiveDuel } from "../../api/live";
 import { handleDynamicImageError } from "../../utils/images";
 
 const WINDOWS = [
@@ -15,8 +16,10 @@ const DUEL_OPTIONS = [
 ];
 
 export default function YenkasaLiveSheet({ open, onClose, onQuickAction }) {
+  const navigate = useNavigate();
   const [windowKey, setWindowKey] = useState("5m");
   const [payload, setPayload] = useState(null);
+  const [activeStreams, setActiveStreams] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [duelBusy, setDuelBusy] = useState(false);
@@ -37,9 +40,13 @@ export default function YenkasaLiveSheet({ open, onClose, onQuickAction }) {
       if (!cancelled && isInitial) setLoading(true);
 
       try {
-        const data = await getLiveMetrics(windowKey);
+        const [data, streamData] = await Promise.all([
+          getLiveMetrics(windowKey),
+          getActiveLivestreams(8).catch(() => ({ streams: [] }))
+        ]);
         if (cancelled) return;
         setPayload(data);
+        setActiveStreams(Array.isArray(streamData?.streams) ? streamData.streams : []);
         setError("");
       } catch (fetchError) {
         if (!cancelled) {
@@ -257,6 +264,43 @@ export default function YenkasaLiveSheet({ open, onClose, onQuickAction }) {
               onQuickAction={onQuickAction}
             />
           ))}
+        </div>
+
+        <div className="feed-live-events">
+          <div className="feed-live-section-title">Livestreams</div>
+          {activeStreams.length ? (
+            <div className="feed-live-streams">
+              {activeStreams.map((stream) => (
+                <button
+                  type="button"
+                  key={stream._id}
+                  className="feed-live-stream"
+                  onClick={() => {
+                    onClose?.();
+                    navigate(`/live/${stream._id}`);
+                  }}
+                >
+                  {stream.thumbnail || stream.hostAvatar ? (
+                    <img
+                      src={stream.thumbnail || stream.hostAvatar}
+                      alt=""
+                      loading="lazy"
+                      onError={handleDynamicImageError}
+                    />
+                  ) : (
+                    <span>{String(stream.hostUsername || "Y").charAt(0)}</span>
+                  )}
+                  <div>
+                    <strong>{stream.title || `${stream.hostUsername} is live`}</strong>
+                    <small>@{stream.hostUsername} · {Number(stream.viewerCount || 0)} watching</small>
+                  </div>
+                  <b>LIVE</b>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="feed-live-status">No active livestreams right now.</div>
+          )}
         </div>
 
         <div className="feed-live-events">

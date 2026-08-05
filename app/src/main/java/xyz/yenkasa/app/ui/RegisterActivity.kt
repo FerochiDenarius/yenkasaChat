@@ -1,12 +1,15 @@
 package xyz.yenkasa.app.ui
 
 import android.content.Intent
+import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
 import android.util.Patterns
 import android.view.View
 import android.view.animation.AnimationUtils
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.RegisterRequest
 import xyz.yenkasa.app.model.LoginResponse
@@ -58,6 +61,7 @@ class RegisterActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        configureAuthSystemBars()
         setContentView(R.layout.activity_register)
 
         // Original views
@@ -119,6 +123,31 @@ class RegisterActivity : AppCompatActivity() {
         }
 
         setupCountrySpinner()
+    }
+
+    private fun configureAuthSystemBars() {
+        val barColor = ContextCompat.getColor(this, R.color.login_background_start)
+        window.statusBarColor = barColor
+        window.navigationBarColor = barColor
+
+        val isNight = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+                Configuration.UI_MODE_NIGHT_YES
+        var flags = window.decorView.systemUiVisibility
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            flags = if (isNight) {
+                flags and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
+            } else {
+                flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+            }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            flags = if (isNight) {
+                flags and View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR.inv()
+            } else {
+                flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+            }
+        }
+        window.decorView.systemUiVisibility = flags
     }
 
     // ✨ STAR SPARKLE ANIMATION

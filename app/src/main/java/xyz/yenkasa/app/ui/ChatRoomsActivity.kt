@@ -352,7 +352,7 @@ class ChatRoomsActivity : AppCompatActivity(), ChatMessageHandler.ChatMessageCal
             senderId = currentUserId,
             roomId = chatRoom._id
         )
-        activeMediaSender?.uploadFileToCloudinary(imageUri, "image")
+        activeMediaSender?.uploadFileToR2(imageUri, "image")
     }
 
     private fun updateFoundCard(rawUsername: String) {

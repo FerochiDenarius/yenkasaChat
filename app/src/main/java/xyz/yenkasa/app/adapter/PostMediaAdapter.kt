@@ -8,7 +8,7 @@ import android.widget.ImageView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import xyz.yenkasa.app.R
-import xyz.yenkasa.app.util.CloudinaryMedia
+import xyz.yenkasa.app.util.R2Media
 
 class PostMediaAdapter(
     private val mediaUrls: List<String>
@@ -26,7 +26,7 @@ class PostMediaAdapter(
 
     override fun onBindViewHolder(holder: MediaViewHolder, position: Int) {
         Glide.with(holder.itemView.context)
-            .load(CloudinaryMedia.optimizedImageUrl(mediaUrls[position], CloudinaryMedia.WIDTH_PREVIEW))
+            .load(R2Media.optimizedImageUrl(mediaUrls[position], R2Media.WIDTH_PREVIEW))
             .placeholder(R.drawable.placeholder_image)
             .into(holder.mediaImage)
     }

@@ -23,7 +23,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.ui.FilePreviewActivity
 import xyz.yenkasa.app.ui.ImagePreviewActivity
-import xyz.yenkasa.app.util.CloudinaryMedia
+import xyz.yenkasa.app.util.R2Media
 import java.util.Locale
 
 class YenkasaChatMediaView @JvmOverloads constructor(
@@ -110,7 +110,7 @@ class YenkasaChatMediaView @JvmOverloads constructor(
     }
 
     private fun bindImage(url: String) {
-        val imageUrl = CloudinaryMedia.optimizedImageUrl(url, CloudinaryMedia.WIDTH_PREVIEW) ?: url
+        val imageUrl = R2Media.optimizedImageUrl(url, R2Media.WIDTH_PREVIEW) ?: url
         imageView.isVisible = true
         progress.isVisible = true
         Glide.with(this)
@@ -128,14 +128,13 @@ class YenkasaChatMediaView @JvmOverloads constructor(
     }
 
     private fun bindVideo(url: String) {
-        val videoUrl = CloudinaryMedia.optimizedVideoUrl(url) ?: url
-        val posterUrl = CloudinaryMedia.videoPosterUrl(url, CloudinaryMedia.WIDTH_PREVIEW) ?: videoUrl
+        val videoUrl = R2Media.optimizedVideoUrl(url) ?: url
         imageView.isVisible = true
         playOverlay.isVisible = true
         progress.isVisible = true
         Glide.with(this)
             .asBitmap()
-            .load(posterUrl)
+            .load(R.drawable.video_placeholder)
             .diskCacheStrategy(DiskCacheStrategy.ALL)
             .placeholder(R.drawable.video_placeholder)
             .error(R.drawable.video_placeholder)

@@ -20,6 +20,8 @@ const PostApprovalSchema = new mongoose.Schema({
   imageUrl: { type: String },
   imageUrls: [{ type: String }],
   videoUrl: { type: String },
+  thumbnailUrl: { type: String, default: "" },
+  posterUrl: { type: String, default: "" },
   audioUrl: { type: String },
 
   submittedAt: { type: Date, default: Date.now },

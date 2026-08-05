@@ -6,9 +6,11 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log // Ensure Log is imported
 import android.webkit.MimeTypeMap
-import com.cloudinary.android.MediaManager
-import com.cloudinary.android.callback.ErrorInfo
-import com.cloudinary.android.callback.UploadCallback
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import xyz.yenkasa.app.model.ChatMediaUploadResponse
 import xyz.yenkasa.app.model.ChatMessage
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.network.ApiService
@@ -17,6 +19,7 @@ import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.io.File
 import java.util.Locale
 
 class ChatMessageHandler(
@@ -92,9 +95,7 @@ class ChatMessageHandler(
         postMessage(messageMap)
     }
 
-// Replace your old uploadFileToCloudinary function with this one
-
-    fun uploadFileToCloudinary(
+    fun uploadFileToR2(
         uri: Uri,
         type: String,
         extraMessageData: Map<String, Any?> = emptyMap()
@@ -112,54 +113,55 @@ class ChatMessageHandler(
 
         Log.d("ChatMessageHandler", "File copied successfully. Safe URI for upload: $safeUri")
 
-        // 3. ✅ Use the 'safeUri' for the upload, NOT the original 'uri'.
-        MediaManager.get().upload(safeUri)
-            .option("resource_type", if (type == "audio" || type == "video") "video" else "auto")
-            .callback(object : UploadCallback {
-                override fun onStart(requestId: String?) {
-                    Log.d("ChatMessageHandler", "Cloudinary upload started. Request ID: $requestId, Type: $type")
-                    callback.onUploadStarted(type)
-                }
+        val uploadFile = safeUri.path?.let { path -> File(path) }
+        if (uploadFile == null || !uploadFile.exists() || uploadFile.length() <= 0L) {
+            Log.e("ChatMessageHandler", "Upload cancelled because prepared file is missing or empty: $safeUri")
+            callback.onError("Failed to process the selected file.")
+            return
+        }
 
-                override fun onProgress(requestId: String?, bytes: Long, totalBytes: Long) {
-                    // Optional: Log progress if needed
-                }
+        val mimeType = resolveUploadMimeType(uri, type)
+        val requestFile = uploadFile.asRequestBody(mimeType.toMediaTypeOrNull())
+        val filePart = MultipartBody.Part.createFormData("file", uploadFile.name, requestFile)
+        val typePart = type.toRequestBody("text/plain".toMediaTypeOrNull())
 
-                override fun onSuccess(requestId: String?, resultData: MutableMap<Any?, Any?>?) {
-                    Log.d("ChatMessageHandler", "Cloudinary upload success. Result: $resultData")
-                    val secureUrl = resultData?.get("secure_url") as? String
-                    if (!secureUrl.isNullOrBlank()) {
-                        Log.i("ChatMessageHandler", "Secure URL extracted: $secureUrl. Proceeding to send message.")
-                        val mediaKey = when (type) {
+        callback.onUploadStarted(type)
+        ApiClient.uploadApiService.uploadChatMedia(filePart, typePart)
+            .enqueue(object : Callback<ChatMediaUploadResponse> {
+                override fun onResponse(
+                    call: Call<ChatMediaUploadResponse>,
+                    response: Response<ChatMediaUploadResponse>
+                ) {
+                    val body = response.body()
+                    if (response.isSuccessful && body?.url?.isNotBlank() == true) {
+                        val mediaKey = body.messageKey?.takeIf { it.isNotBlank() } ?: when (type) {
                             "image" -> "imageUrl"
                             "audio" -> "audioUrl"
                             "video" -> "videoUrl"
-                            "file" -> "fileUrl"
                             else -> "fileUrl"
                         }
-                        sendMessage(extraMessageData + mapOf(mediaKey to secureUrl))
+                        Log.i("ChatMessageHandler", "Chat media uploaded to R2. key=$mediaKey type=${body.type}")
+                        sendMessage(extraMessageData + mapOf(mediaKey to body.url))
                     } else {
-                        Log.e("ChatMessageHandler", "Cloudinary upload succeeded but secure_url is null or blank.")
-                        callback.onError("Upload succeeded but no URL was returned.")
+                        val errorBodyString = response.errorBody()?.string().orEmpty()
+                        Log.e(
+                            "ChatMessageHandler",
+                            "R2 chat media upload failed. Code: ${response.code()}, ErrorBody: $errorBodyString"
+                        )
+                        callback.onError(parseUploadError(errorBodyString))
                     }
                 }
 
-                override fun onError(requestId: String?, error: ErrorInfo?) {
-                    Log.e("ChatMessageHandler", "Cloudinary upload failed. Error: ${error?.description}")
-                    callback.onError("Upload failed: ${error?.description} (Code: ${error?.code})")
+                override fun onFailure(call: Call<ChatMediaUploadResponse>, t: Throwable) {
+                    Log.e("ChatMessageHandler", "R2 chat media upload failed: ${t.message}", t)
+                    callback.onError("Upload failed: ${t.message}")
                 }
-
-                override fun onReschedule(requestId: String?, error: ErrorInfo?) {
-                    Log.w("ChatMessageHandler", "Cloudinary upload rescheduled. Error: ${error?.description}")
-                    callback.onError("Upload rescheduled: ${error?.description}")
-                }
-            }).dispatch()
+            })
     }
 
     fun checkAndUploadAudio(uri: Uri) {
-        uploadFileToCloudinary(uri, "audio")
+        uploadFileToR2(uri, "audio")
     }
-// Add this new private function inside your ChatMessageHandler class
 
     private fun prepareUploadUri(fileUri: Uri, type: String): Uri? {
         val optimized = UploadMediaOptimizer.prepareForUpload(
@@ -230,6 +232,22 @@ class ChatMessageHandler(
         } finally {
             cursor?.close()
         }
+    }
+
+    private fun resolveUploadMimeType(fileUri: Uri, type: String): String {
+        return context.contentResolver.getType(fileUri) ?: when (type) {
+            "image" -> "image/jpeg"
+            "audio" -> "audio/mp4"
+            "video" -> "video/mp4"
+            else -> "application/octet-stream"
+        }
+    }
+
+    private fun parseUploadError(errorBody: String): String {
+        return runCatching {
+            val json = JSONObject(errorBody)
+            json.optString("error").ifBlank { json.optString("message") }
+        }.getOrNull()?.takeIf { it.isNotBlank() } ?: "Upload failed. Please try again."
     }
 
     private fun postMessage(messageMap: Map<String, Any?>) {

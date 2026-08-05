@@ -154,7 +154,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
     }
 
     private val filePickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let { chatMessageHandler.uploadFileToCloudinary(it, "file") }
+        uri?.let { chatMessageHandler.uploadFileToR2(it, "file") }
     }
 
     private val chatMediaFlowLauncher = registerForActivityResult(
@@ -623,7 +623,7 @@ class ChatActivity : AppCompatActivity(), ChatHelperCallback, ChatMessageHandler
 
             Log.d("ChatActivity", "Sticker received with URI: $contentUri")
             // Use your existing handler to upload it as an "image"
-            chatMessageHandler.uploadFileToCloudinary(contentUri, "image")
+            chatMessageHandler.uploadFileToR2(contentUri, "image")
         }
     }
 

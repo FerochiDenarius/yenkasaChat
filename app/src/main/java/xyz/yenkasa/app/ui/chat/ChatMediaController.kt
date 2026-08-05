@@ -174,7 +174,7 @@ class ChatMediaController(
             extraData["repliedTo"] = repliedToId
         }
 
-        chatMessageHandlerProvider().uploadFileToCloudinary(uri, type, extraData)
+        chatMessageHandlerProvider().uploadFileToR2(uri, type, extraData)
     }
 
     fun clearPendingMediaAfterSentIfNeeded() {
@@ -324,7 +324,7 @@ class ChatMediaController(
     }
 
     private fun sendSticker(uri: Uri) {
-        chatMessageHandlerProvider().uploadFileToCloudinary(uri, "image")
+        chatMessageHandlerProvider().uploadFileToR2(uri, "image")
     }
 
     private fun launchChatMediaPreview(items: List<ChatMediaItem>) {
@@ -383,7 +383,7 @@ class ChatMediaController(
         next.caption?.let { extraData["text"] = it }
         replyingToMessageIdProvider()?.let { extraData["repliedTo"] = it }
         Log.d(TAG, "Uploading queued media: uri=${next.uri}, type=${next.type}, caption=${next.caption}")
-        chatMessageHandlerProvider().uploadFileToCloudinary(next.uri, next.type, extraData)
+        chatMessageHandlerProvider().uploadFileToR2(next.uri, next.type, extraData)
     }
 
     fun showPendingMediaPreview(uri: Uri, type: String) {

@@ -105,7 +105,7 @@ router.get("/pending", authMiddleware, pendingBackfillLimiter, async (req, res) 
   const missingApprovalPosts = await Post.find({
     status: { $in: ["pending", "pending_review"] },
     _id: { $nin: existingApprovalPostIds }
-  }).select("_id userId text caption textBackgroundColor imageUrl imageUrls videoUrl audioUrl createdAt");
+  }).select("_id userId text caption textBackgroundColor imageUrl imageUrls videoUrl thumbnailUrl posterUrl audioUrl createdAt");
 
   if (missingApprovalPosts.length > 0) {
     console.warn("[PostApproval] Backfilling missing approval rows", {
@@ -129,6 +129,8 @@ router.get("/pending", authMiddleware, pendingBackfillLimiter, async (req, res) 
               imageUrl: post.imageUrl || "",
               imageUrls: post.imageUrls || [],
               videoUrl: post.videoUrl || "",
+              thumbnailUrl: post.thumbnailUrl || post.posterUrl || "",
+              posterUrl: post.posterUrl || post.thumbnailUrl || "",
               audioUrl: post.audioUrl || "",
               submittedAt: post.createdAt || new Date(),
               status: "pending"

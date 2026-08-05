@@ -5,7 +5,7 @@
         <shape>
             <gradient
                 android:angle="0"
-                android:startColor="#FFE56B"
+                android:startColor="@color/login_button_start"
                 android:centerColor="@color/login_gold"
                 android:endColor="@color/login_gold_end" />
             <corners android:radius="28dp" />

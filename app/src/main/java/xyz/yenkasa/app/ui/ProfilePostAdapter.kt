@@ -11,7 +11,6 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.Post
-import xyz.yenkasa.app.util.CloudinaryMedia
 
 class ProfilePostAdapter(
     private val posts: MutableList<Post> = mutableListOf(),

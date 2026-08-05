@@ -27,7 +27,7 @@ import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.model.ViewRequest
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TextPostBackgrounds
-import xyz.yenkasa.app.util.CloudinaryMedia
+import xyz.yenkasa.app.util.R2Media
 import xyz.yenkasa.app.util.UserBadgeUtils
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.WalletBalanceManager
@@ -253,7 +253,7 @@ class PostAdapter(
 
         fun prepareVideoUi(post: Post, position: Int) {
             val videoUrl = post.optimizedVideoUrl()
-            val thumbnailUrl = CloudinaryMedia.videoPosterUrl(videoUrl, CloudinaryMedia.WIDTH_PREVIEW) ?: videoUrl
+            val thumbnailUrl = post.optimizedVideoPosterUrl()
             mediaAspectKey = thumbnailUrl
             applyMediaAspect(9f / 16f, playerView)
             imageVideoThumbnail.visibility = View.GONE
@@ -335,7 +335,7 @@ class PostAdapter(
         )
 
         Glide.with(holder.itemRoot.context)
-            .load(CloudinaryMedia.optimizedImageUrl(post.userId.profileImage, CloudinaryMedia.WIDTH_AVATAR))
+            .load(R2Media.optimizedImageUrl(post.userId.profileImage, R2Media.WIDTH_AVATAR))
             .placeholder(R.drawable.ic_profile_placeholder)
             .circleCrop()
             .into(holder.profileImage)

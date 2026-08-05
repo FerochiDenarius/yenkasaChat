@@ -2,7 +2,9 @@ package xyz.yenkasa.app.ui
 
 // Keep all your imports
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Rect
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.animation.AnimationUtils
@@ -10,6 +12,7 @@ import android.view.WindowManager
 import android.widget.*
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.Observer
@@ -73,6 +76,7 @@ class LoginActivity : AppCompatActivity() {
             WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or
                     WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN
         )
+        configureAuthSystemBars()
         setContentView(R.layout.activity_login)
         updateManager = UpdateManager(this)
         updateManager?.checkForUpdates(source = "login_screen")
@@ -113,6 +117,31 @@ class LoginActivity : AppCompatActivity() {
         userViewModel.playerIdUpdateResult.observe(this, Observer { success ->
             if (success) Log.i("LoginActivity", "Player ID updated.")
         })
+    }
+
+    private fun configureAuthSystemBars() {
+        val barColor = ContextCompat.getColor(this, R.color.login_background_start)
+        window.statusBarColor = barColor
+        window.navigationBarColor = barColor
+
+        val isNight = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+                Configuration.UI_MODE_NIGHT_YES
+        var flags = window.decorView.systemUiVisibility
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            flags = if (isNight) {
+                flags and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
+            } else {
+                flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+            }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            flags = if (isNight) {
+                flags and View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR.inv()
+            } else {
+                flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+            }
+        }
+        window.decorView.systemUiVisibility = flags
     }
 
     private fun setupKeyboardAwareScrolling() {

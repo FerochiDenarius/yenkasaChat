@@ -1,7 +1,7 @@
 package xyz.yenkasa.app.ui.player
 
 import xyz.yenkasa.app.model.Post
-import xyz.yenkasa.app.util.CloudinaryMedia
+import xyz.yenkasa.app.util.R2Media
 import xyz.yenkasa.app.util.TextPostBackgrounds
 
 data class YenkasaPlayerItem(
@@ -57,12 +57,12 @@ data class YenkasaPlayerItem(
                 thumbnailUrl = when {
                     imageUrls.isNotEmpty() -> imageUrls.firstOrNull()
                     !optimizedVideoUrl.isNullOrBlank() -> post.optimizedVideoPosterUrl()
-                    else -> CloudinaryMedia.optimizedImageUrl(post.textBackgroundImageUrl, CloudinaryMedia.WIDTH_FEED)
+                    else -> R2Media.optimizedImageUrl(post.textBackgroundImageUrl, R2Media.WIDTH_FEED)
                 },
                 textContent = post.caption,
                 caption = post.caption,
                 username = post.userId.username,
-                userAvatarUrl = CloudinaryMedia.optimizedImageUrl(post.userId.profileImage, CloudinaryMedia.WIDTH_AVATAR),
+                userAvatarUrl = R2Media.optimizedImageUrl(post.userId.profileImage, R2Media.WIDTH_AVATAR),
                 isVerified = post.userId.verified,
                 communityName = post.communityId?.displayName ?: post.communityId?.name,
                 createdAt = post.createdAt,
@@ -75,7 +75,7 @@ data class YenkasaPlayerItem(
                 rewardAmount = post.coinsEarned,
                 walletBalance = walletBalance,
                 textBackgroundColor = normalizedBackground.ifBlank { null },
-                textBackgroundImageUrl = CloudinaryMedia.optimizedImageUrl(post.textBackgroundImageUrl, CloudinaryMedia.WIDTH_FEED),
+                textBackgroundImageUrl = R2Media.optimizedImageUrl(post.textBackgroundImageUrl, R2Media.WIDTH_FEED),
                 userSelectedBackground = selectedBackground
             )
         }

@@ -5,7 +5,6 @@ import android.app.NotificationManager // Added
 import android.os.Build // Added
 import android.os.StrictMode
 import android.util.Log
-import com.cloudinary.android.MediaManager
 import xyz.yenkasa.app.network.ApiClient
 import xyz.yenkasa.app.util.TokenManager
 import xyz.yenkasa.app.util.OneSignalHelper // Make sure this import is correct
@@ -13,7 +12,6 @@ import com.google.firebase.FirebaseApp
 import com.onesignal.OSSubscriptionObserver
 import com.onesignal.OSSubscriptionStateChanges
 import com.onesignal.OneSignal
-import java.util.HashMap
 import com.jakewharton.threetenabp.AndroidThreeTen
 import androidx.core.app.NotificationCompat
 import com.google.android.gms.ads.MobileAds
@@ -189,14 +187,6 @@ class MyApplication : Application(), OSSubscriptionObserver {
         OneSignalHelper.schedulePlayerIdSyncRetries(applicationContext, "application_start")
         Log.i(ONE_SIGNAL_TAG, "--- OneSignal v4 Setup Complete ---")
         // --- END ONE SIGNAL V4 INITIALIZATION ---
-
-        // Initialize Cloudinary
-        val config: HashMap<String, String> = HashMap()
-        config["cloud_name"] = "dwjj3zsaq"
-        config["api_key"] = "548148892215273"
-        config["api_secret"] = "d3L_8BGtqM30JgkRHy6SabmKnc0"
-        MediaManager.init(this, config)
-        Log.d("MyApplication", "MediaManager initialized.")
 
         Log.d("MyApplication", "Application onCreate finished.")
     }

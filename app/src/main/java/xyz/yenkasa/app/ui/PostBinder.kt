@@ -12,7 +12,6 @@ import com.bumptech.glide.Glide
 import xyz.yenkasa.app.R
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.ui.player.YenkasaVideoPlayerView
-import xyz.yenkasa.app.util.CloudinaryMedia
 import xyz.yenkasa.app.util.TextPostBackgrounds
 import xyz.yenkasa.app.util.UserBadgeUtils
 import java.text.SimpleDateFormat
@@ -147,9 +146,10 @@ object PostBinder {
                 mediaContainer.visibility = View.VISIBLE
                 playerView.visibility = View.VISIBLE
                 val videoUrl = post.optimizedVideoUrl() ?: post.videoUrl
+                val thumbnailUrl = post.optimizedVideoPosterUrl()
                 playerView.bindVideo(
                     mediaUrl = videoUrl,
-                    thumbnailUrl = CloudinaryMedia.videoPosterUrl(videoUrl, CloudinaryMedia.WIDTH_PREVIEW),
+                    thumbnailUrl = thumbnailUrl,
                     autoplay = false,
                     muted = true
                 )

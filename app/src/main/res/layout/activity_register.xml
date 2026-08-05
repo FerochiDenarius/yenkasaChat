@@ -4,26 +4,26 @@
     android:id="@+id/register_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_login_root">
+    android:background="@drawable/bg_register_mock_root">
 
     <View
         android:id="@+id/registerGlowTop"
-        android:layout_width="260dp"
-        android:layout_height="260dp"
-        android:layout_marginTop="-110dp"
-        android:layout_marginEnd="-80dp"
-        android:alpha="0.7"
+        android:layout_width="280dp"
+        android:layout_height="280dp"
+        android:layout_marginTop="-140dp"
+        android:layout_marginEnd="-90dp"
+        android:alpha="0.34"
         android:background="@drawable/bg_login_glow"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <View
         android:id="@+id/registerGlowBottom"
-        android:layout_width="220dp"
-        android:layout_height="220dp"
-        android:layout_marginStart="-100dp"
-        android:layout_marginBottom="-90dp"
-        android:alpha="0.35"
+        android:layout_width="260dp"
+        android:layout_height="260dp"
+        android:layout_marginStart="-120dp"
+        android:layout_marginBottom="-120dp"
+        android:alpha="0.26"
         android:background="@drawable/bg_login_glow"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
@@ -40,10 +40,10 @@
         android:clipToPadding="false"
         android:fillViewport="true"
         android:overScrollMode="never"
-        android:paddingStart="18dp"
-        android:paddingTop="28dp"
-        android:paddingEnd="18dp"
-        android:paddingBottom="28dp"
+        android:paddingStart="14dp"
+        android:paddingTop="20dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="20dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -59,63 +59,83 @@
                 android:id="@+id/registerCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:layout_marginBottom="24dp"
-                app:cardBackgroundColor="@color/login_card_background"
-                app:cardCornerRadius="28dp"
-                app:cardElevation="10dp"
-                app:strokeColor="@color/login_card_stroke"
+                android:layout_marginBottom="18dp"
+                app:cardBackgroundColor="@color/register_mock_card"
+                app:cardCornerRadius="30dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/register_mock_card_stroke"
                 app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:paddingStart="20dp"
+                    android:paddingStart="24dp"
                     android:paddingTop="26dp"
-                    android:paddingEnd="20dp"
-                    android:paddingBottom="24dp">
+                    android:paddingEnd="24dp"
+                    android:paddingBottom="26dp">
 
                     <ImageView
                         android:id="@+id/registerHeroIcon"
-                        android:layout_width="62dp"
-                        android:layout_height="62dp"
+                        android:layout_width="112dp"
+                        android:layout_height="86dp"
                         android:layout_gravity="center_horizontal"
-                        android:background="@drawable/bg_login_icon_tile"
-                        android:padding="13dp"
-                        android:src="@drawable/ic_register_book"
-                        android:tint="@color/login_gold"
-                        android:contentDescription="@null" />
+                        android:adjustViewBounds="true"
+                        android:contentDescription="@null"
+                        android:scaleType="centerInside"
+                        android:src="@drawable/yenkasa_registration_logo" />
+
+                    <TextView
+                        android:id="@+id/textBrandName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginTop="4dp"
+                        android:fontFamily="sans-serif-black"
+                        android:letterSpacing="0.08"
+                        android:text="@string/yenkasa_brand_caps"
+                        android:textColor="@color/register_mock_primary_text"
+                        android:textSize="34sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textBrandTagline"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/register_brand_tagline"
+                        android:textColor="@color/register_mock_secondary_text"
+                        android:textSize="15sp" />
 
                     <TextView
                         android:id="@+id/textRegisterTitle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_gravity="center_horizontal"
-                        android:layout_marginTop="22dp"
-                        android:fontFamily="sans"
+                        android:layout_marginTop="28dp"
+                        android:fontFamily="sans-serif-medium"
                         android:gravity="center"
                         android:text="@string/register_title"
-                        android:textColor="@color/login_primary_text"
-                        android:textSize="31sp"
+                        android:textColor="@color/register_mock_primary_text"
+                        android:textSize="28sp"
                         android:textStyle="bold"
                         android:transitionName="hero_title" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="12dp"
                         android:gravity="center"
-                        android:lineSpacingExtra="4dp"
                         android:text="@string/register_subtitle"
-                        android:textColor="@color/login_secondary_text"
+                        android:textColor="@color/register_mock_secondary_text"
                         android:textSize="16sp" />
 
                     <RadioGroup
                         android:id="@+id/radioGroup"
                         android:layout_width="match_parent"
-                        android:layout_height="56dp"
-                        android:layout_marginTop="30dp"
+                        android:layout_height="50dp"
+                        android:layout_marginTop="26dp"
                         android:background="@drawable/bg_register_segment_group"
                         android:orientation="horizontal"
                         android:padding="2dp">
@@ -129,12 +149,12 @@
                             android:button="@null"
                             android:checked="true"
                             android:drawableStart="@drawable/ic_register_mail"
-                            android:drawablePadding="10dp"
+                            android:drawablePadding="8dp"
                             android:drawableTint="@color/selector_register_segment_text"
                             android:gravity="center"
                             android:text="@string/email"
                             android:textColor="@color/selector_register_segment_text"
-                            android:textSize="16sp"
+                            android:textSize="14sp"
                             android:textStyle="bold" />
 
                         <RadioButton
@@ -145,12 +165,12 @@
                             android:background="@drawable/selector_register_segment_bg"
                             android:button="@null"
                             android:drawableStart="@drawable/ic_register_phone"
-                            android:drawablePadding="10dp"
+                            android:drawablePadding="8dp"
                             android:drawableTint="@color/selector_register_segment_text"
                             android:gravity="center"
                             android:text="@string/phone"
                             android:textColor="@color/selector_register_segment_text"
-                            android:textSize="16sp"
+                            android:textSize="14sp"
                             android:textStyle="bold" />
                     </RadioGroup>
 
@@ -159,19 +179,19 @@
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="24dp"
+                        android:layout_marginTop="22dp"
                         android:hint="@string/email_address"
-                        app:boxBackgroundColor="@color/login_input_background"
+                        app:boxBackgroundColor="@color/register_mock_field"
                         app:boxCornerRadiusBottomEnd="16dp"
                         app:boxCornerRadiusBottomStart="16dp"
                         app:boxCornerRadiusTopEnd="16dp"
                         app:boxCornerRadiusTopStart="16dp"
-                        app:boxStrokeColor="@color/login_input_stroke"
+                        app:boxStrokeColor="@color/register_mock_field_stroke"
                         app:boxStrokeWidth="1dp"
                         app:boxStrokeWidthFocused="2dp"
-                        app:hintTextColor="@color/login_input_hint"
+                        app:hintTextColor="@color/register_mock_hint_text"
                         app:startIconDrawable="@drawable/ic_register_mail"
-                        app:startIconTint="@color/login_gold">
+                        app:startIconTint="#745CF6">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/editEmail"
@@ -181,8 +201,8 @@
                             android:inputType="textEmailAddress"
                             android:paddingStart="4dp"
                             android:paddingEnd="12dp"
-                            android:textColor="@color/login_input_text"
-                            android:textColorHint="@color/login_secondary_text"
+                            android:textColor="@color/register_mock_input_text"
+                            android:textColorHint="@color/register_mock_placeholder_text"
                             android:textSize="16sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
@@ -191,20 +211,20 @@
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="24dp"
+                        android:layout_marginTop="22dp"
                         android:hint="@string/phone_number"
                         android:visibility="gone"
-                        app:boxBackgroundColor="@color/login_input_background"
+                        app:boxBackgroundColor="@color/register_mock_field"
                         app:boxCornerRadiusBottomEnd="16dp"
                         app:boxCornerRadiusBottomStart="16dp"
                         app:boxCornerRadiusTopEnd="16dp"
                         app:boxCornerRadiusTopStart="16dp"
-                        app:boxStrokeColor="@color/login_input_stroke"
+                        app:boxStrokeColor="@color/register_mock_field_stroke"
                         app:boxStrokeWidth="1dp"
                         app:boxStrokeWidthFocused="2dp"
-                        app:hintTextColor="@color/login_input_hint"
+                        app:hintTextColor="@color/register_mock_hint_text"
                         app:startIconDrawable="@drawable/ic_register_phone"
-                        app:startIconTint="@color/login_gold">
+                        app:startIconTint="#745CF6">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/editPhone"
@@ -214,8 +234,8 @@
                             android:inputType="phone"
                             android:paddingStart="4dp"
                             android:paddingEnd="12dp"
-                            android:textColor="@color/login_input_text"
-                            android:textColorHint="@color/login_secondary_text"
+                            android:textColor="@color/register_mock_input_text"
+                            android:textColorHint="@color/register_mock_placeholder_text"
                             android:textSize="16sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
@@ -226,17 +246,17 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="14dp"
                         android:hint="@string/username"
-                        app:boxBackgroundColor="@color/login_input_background"
+                        app:boxBackgroundColor="@color/register_mock_field"
                         app:boxCornerRadiusBottomEnd="16dp"
                         app:boxCornerRadiusBottomStart="16dp"
                         app:boxCornerRadiusTopEnd="16dp"
                         app:boxCornerRadiusTopStart="16dp"
-                        app:boxStrokeColor="@color/login_input_stroke"
+                        app:boxStrokeColor="@color/register_mock_field_stroke"
                         app:boxStrokeWidth="1dp"
                         app:boxStrokeWidthFocused="2dp"
-                        app:hintTextColor="@color/login_input_hint"
+                        app:hintTextColor="@color/register_mock_hint_text"
                         app:startIconDrawable="@drawable/ic_user_modern"
-                        app:startIconTint="@color/login_gold">
+                        app:startIconTint="#745CF6">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/editUsername"
@@ -246,28 +266,35 @@
                             android:inputType="textPersonName"
                             android:paddingStart="4dp"
                             android:paddingEnd="12dp"
-                            android:textColor="@color/login_input_text"
-                            android:textColorHint="@color/login_secondary_text"
+                            android:textColor="@color/register_mock_input_text"
+                            android:textColorHint="@color/register_mock_placeholder_text"
                             android:textSize="16sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <LinearLayout
                         android:id="@+id/countryField"
                         android:layout_width="match_parent"
-                        android:layout_height="76dp"
+                        android:layout_height="74dp"
                         android:layout_marginTop="14dp"
-                        android:background="@drawable/bg_register_field"
+                        android:background="@drawable/bg_register_mock_field"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
                         android:paddingStart="16dp"
-                        android:paddingEnd="10dp">
+                        android:paddingEnd="12dp">
 
-                        <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:src="@drawable/ic_register_globe"
-                            android:tint="@color/login_gold"
-                            android:contentDescription="@null" />
+                        <FrameLayout
+                            android:layout_width="46dp"
+                            android:layout_height="46dp"
+                            android:background="@drawable/bg_register_icon_cyan">
+
+                            <ImageView
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_gravity="center"
+                                android:contentDescription="@null"
+                                android:src="@drawable/ic_register_globe"
+                                android:tint="@android:color/white" />
+                        </FrameLayout>
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -281,7 +308,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/country"
-                                android:textColor="@color/login_secondary_text"
+                                android:textColor="@color/register_mock_secondary_text"
                                 android:textSize="13sp" />
 
                             <Spinner
@@ -303,20 +330,27 @@
                     <LinearLayout
                         android:id="@+id/communityField"
                         android:layout_width="match_parent"
-                        android:layout_height="82dp"
+                        android:layout_height="78dp"
                         android:layout_marginTop="14dp"
-                        android:background="@drawable/bg_register_field"
+                        android:background="@drawable/bg_register_mock_field"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
                         android:paddingStart="16dp"
-                        android:paddingEnd="10dp">
+                        android:paddingEnd="12dp">
 
-                        <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:src="@drawable/ic_register_pin"
-                            android:tint="@color/login_gold"
-                            android:contentDescription="@null" />
+                        <FrameLayout
+                            android:layout_width="46dp"
+                            android:layout_height="46dp"
+                            android:background="@drawable/bg_register_icon_purple">
+
+                            <ImageView
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_gravity="center"
+                                android:contentDescription="@null"
+                                android:src="@drawable/ic_register_pin"
+                                android:tint="@android:color/white" />
+                        </FrameLayout>
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -330,7 +364,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/community_location_label"
-                                android:textColor="@color/login_secondary_text"
+                                android:textColor="@color/register_mock_secondary_text"
                                 android:textSize="13sp" />
 
                             <Spinner
@@ -350,17 +384,17 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="14dp"
                         android:hint="@string/location"
-                        app:boxBackgroundColor="@color/login_input_background"
+                        app:boxBackgroundColor="@color/register_mock_field"
                         app:boxCornerRadiusBottomEnd="16dp"
                         app:boxCornerRadiusBottomStart="16dp"
                         app:boxCornerRadiusTopEnd="16dp"
                         app:boxCornerRadiusTopStart="16dp"
-                        app:boxStrokeColor="@color/login_input_stroke"
+                        app:boxStrokeColor="@color/register_mock_field_stroke"
                         app:boxStrokeWidth="1dp"
                         app:boxStrokeWidthFocused="2dp"
-                        app:hintTextColor="@color/login_input_hint"
+                        app:hintTextColor="@color/register_mock_hint_text"
                         app:startIconDrawable="@drawable/ic_register_pin"
-                        app:startIconTint="@color/login_gold">
+                        app:startIconTint="#13C8A8">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/editLocation"
@@ -370,8 +404,8 @@
                             android:inputType="textPostalAddress"
                             android:paddingStart="4dp"
                             android:paddingEnd="12dp"
-                            android:textColor="@color/login_input_text"
-                            android:textColorHint="@color/login_secondary_text"
+                            android:textColor="@color/register_mock_input_text"
+                            android:textColorHint="@color/register_mock_placeholder_text"
                             android:textSize="16sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
@@ -382,19 +416,19 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="14dp"
                         android:hint="@string/password"
-                        app:boxBackgroundColor="@color/login_input_background"
+                        app:boxBackgroundColor="@color/register_mock_field"
                         app:boxCornerRadiusBottomEnd="16dp"
                         app:boxCornerRadiusBottomStart="16dp"
                         app:boxCornerRadiusTopEnd="16dp"
                         app:boxCornerRadiusTopStart="16dp"
-                        app:boxStrokeColor="@color/login_input_stroke"
+                        app:boxStrokeColor="@color/register_mock_field_stroke"
                         app:boxStrokeWidth="1dp"
                         app:boxStrokeWidthFocused="2dp"
                         app:endIconMode="password_toggle"
-                        app:endIconTint="@color/login_secondary_text"
-                        app:hintTextColor="@color/login_input_hint"
+                        app:endIconTint="@color/register_mock_password_icon"
+                        app:hintTextColor="@color/register_mock_hint_text"
                         app:startIconDrawable="@drawable/ic_register_lock"
-                        app:startIconTint="@color/login_gold">
+                        app:startIconTint="#745CF6">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/editPassword"
@@ -404,8 +438,8 @@
                             android:inputType="textPassword"
                             android:paddingStart="4dp"
                             android:paddingEnd="12dp"
-                            android:textColor="@color/login_input_text"
-                            android:textColorHint="@color/login_secondary_text"
+                            android:textColor="@color/register_mock_input_text"
+                            android:textColorHint="@color/register_mock_placeholder_text"
                             android:textSize="16sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
@@ -416,19 +450,19 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="14dp"
                         android:hint="@string/confirm_password"
-                        app:boxBackgroundColor="@color/login_input_background"
+                        app:boxBackgroundColor="@color/register_mock_field"
                         app:boxCornerRadiusBottomEnd="16dp"
                         app:boxCornerRadiusBottomStart="16dp"
                         app:boxCornerRadiusTopEnd="16dp"
                         app:boxCornerRadiusTopStart="16dp"
-                        app:boxStrokeColor="@color/login_input_stroke"
+                        app:boxStrokeColor="@color/register_mock_field_stroke"
                         app:boxStrokeWidth="1dp"
                         app:boxStrokeWidthFocused="2dp"
                         app:endIconMode="password_toggle"
-                        app:endIconTint="@color/login_secondary_text"
-                        app:hintTextColor="@color/login_input_hint"
+                        app:endIconTint="@color/register_mock_password_icon"
+                        app:hintTextColor="@color/register_mock_hint_text"
                         app:startIconDrawable="@drawable/ic_register_lock"
-                        app:startIconTint="@color/login_gold">
+                        app:startIconTint="#13C8A8">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/editConfirmPassword"
@@ -438,8 +472,8 @@
                             android:inputType="textPassword"
                             android:paddingStart="4dp"
                             android:paddingEnd="12dp"
-                            android:textColor="@color/login_input_text"
-                            android:textColorHint="@color/login_secondary_text"
+                            android:textColor="@color/register_mock_input_text"
+                            android:textColorHint="@color/register_mock_placeholder_text"
                             android:textSize="16sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
@@ -452,28 +486,28 @@
 
                         <CheckBox
                             android:id="@+id/checkTerms"
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            android:buttonTint="@color/login_gold" />
+                            android:layout_width="42dp"
+                            android:layout_height="42dp"
+                            android:buttonTint="#B8C2D6" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="4dp"
+                            android:layout_marginStart="2dp"
                             android:text="@string/i_agree_to_the"
-                            android:textColor="@color/login_secondary_text"
+                            android:textColor="@color/register_mock_secondary_text"
                             android:textSize="15sp" />
 
                         <TextView
                             android:id="@+id/textTermsLink"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:paddingStart="5dp"
+                            android:paddingStart="8dp"
                             android:paddingTop="10dp"
                             android:paddingEnd="5dp"
                             android:paddingBottom="10dp"
                             android:text="@string/user_agreement"
-                            android:textColor="@color/login_gold"
+                            android:textColor="@color/register_mock_link_text"
                             android:textSize="15sp"
                             android:textStyle="bold" />
                     </LinearLayout>
@@ -502,27 +536,48 @@
                         android:progressDrawable="@drawable/progress_emerald"
                         android:visibility="gone" />
 
-                    <Button
-                        android:id="@+id/btnRegister"
+                    <FrameLayout
                         android:layout_width="match_parent"
-                        android:layout_height="58dp"
-                        android:layout_marginTop="20dp"
-                        android:background="@drawable/bg_login_button"
-                        android:drawableEnd="@drawable/ic_arrow_forward_login"
-                        android:drawableTint="@color/login_deep_green"
-                        android:fontFamily="sans"
-                        android:paddingStart="22dp"
-                        android:paddingEnd="22dp"
-                        android:text="@string/create_account"
-                        android:textAllCaps="false"
-                        android:textColor="@color/login_deep_green"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
+                        android:layout_height="60dp"
+                        android:layout_marginTop="18dp"
+                        android:background="@drawable/bg_register_mock_button">
+
+                        <androidx.appcompat.widget.AppCompatButton
+                            android:id="@+id/btnRegister"
+                            style="@style/NoTintButton"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="@android:color/transparent"
+                            android:backgroundTint="@android:color/transparent"
+                            android:fontFamily="sans-serif-medium"
+                            android:gravity="center"
+                            android:includeFontPadding="false"
+                            android:minWidth="0dp"
+                            android:minHeight="0dp"
+                            android:paddingStart="22dp"
+                            android:paddingEnd="22dp"
+                            android:stateListAnimator="@null"
+                            android:text="@string/create_account"
+                            android:textAllCaps="false"
+                            android:textColor="@android:color/white"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            app:backgroundTint="@android:color/transparent" />
+
+                        <ImageView
+                            android:layout_width="30dp"
+                            android:layout_height="30dp"
+                            android:layout_gravity="end|center_vertical"
+                            android:layout_marginEnd="22dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_arrow_forward_login"
+                            app:tint="@android:color/white" />
+                    </FrameLayout>
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="24dp"
+                        android:layout_marginTop="22dp"
                         android:gravity="center"
                         android:orientation="horizontal">
 
@@ -530,19 +585,19 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/already_have_account"
-                            android:textColor="@color/login_secondary_text"
+                            android:textColor="@color/register_mock_secondary_text"
                             android:textSize="15sp" />
 
                         <TextView
                             android:id="@+id/textLoginLink"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:paddingStart="6dp"
+                            android:paddingStart="8dp"
                             android:paddingTop="10dp"
                             android:paddingEnd="6dp"
                             android:paddingBottom="10dp"
                             android:text="@string/log_in"
-                            android:textColor="@color/login_gold"
+                            android:textColor="@color/register_mock_link_text"
                             android:textSize="15sp"
                             android:textStyle="bold" />
                     </LinearLayout>

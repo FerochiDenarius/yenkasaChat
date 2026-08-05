@@ -22,7 +22,6 @@ import androidx.media3.ui.PlayerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import xyz.yenkasa.app.R
-import xyz.yenkasa.app.util.CloudinaryMedia
 import xyz.yenkasa.app.util.YenkasaMediaCache
 
 class YenkasaVideoPlayerView @JvmOverloads constructor(
@@ -125,7 +124,7 @@ class YenkasaVideoPlayerView @JvmOverloads constructor(
         }
 
         isVisible = true
-        loadPoster(url)
+        loadPoster()
         setMuted(muted)
         if (autoplay) {
             play()
@@ -260,10 +259,8 @@ class YenkasaVideoPlayerView @JvmOverloads constructor(
         }
     }
 
-    private fun loadPoster(url: String) {
+    private fun loadPoster() {
         val candidate = posterUrl
-            ?: CloudinaryMedia.videoPosterUrl(url, CloudinaryMedia.WIDTH_PREVIEW)
-            ?: url
         poster.isVisible = true
         centerPlay.isVisible = true
         Glide.with(this)

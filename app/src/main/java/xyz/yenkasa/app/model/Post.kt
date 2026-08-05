@@ -2,7 +2,7 @@ package xyz.yenkasa.app.model
 
 import com.google.gson.annotations.SerializedName
 import org.json.JSONObject
-import xyz.yenkasa.app.util.CloudinaryMedia
+import xyz.yenkasa.app.util.R2Media
 
 data class Post(
     @SerializedName("_id")
@@ -71,11 +71,11 @@ data class Post(
         return imageUrls.orEmpty()
             .filter { it.isNotBlank() }
             .ifEmpty { imageUrl?.takeIf { it.isNotBlank() }?.let { listOf(it) } ?: emptyList() }
-            .mapNotNull { CloudinaryMedia.optimizedImageUrl(it, CloudinaryMedia.WIDTH_FEED) }
+            .mapNotNull { R2Media.optimizedImageUrl(it, R2Media.WIDTH_FEED) }
     }
 
     fun optimizedVideoUrl(): String? =
-        CloudinaryMedia.optimizedVideoUrl(videoUrl?.takeIf { it.isNotBlank() })
+        R2Media.optimizedVideoUrl(videoUrl?.takeIf { it.isNotBlank() })
 
     fun optimizedAudioUrl(): String? =
         audioUrl?.takeIf { it.isNotBlank() }
@@ -83,8 +83,7 @@ data class Post(
     fun optimizedVideoPosterUrl(): String? {
         val storedPoster = thumbnailUrl?.takeIf { it.isNotBlank() }
             ?: posterUrl?.takeIf { it.isNotBlank() }
-        return storedPoster?.let { CloudinaryMedia.optimizedImageUrl(it, CloudinaryMedia.WIDTH_PREVIEW) ?: it }
-            ?: CloudinaryMedia.videoPosterUrl(videoUrl?.takeIf { it.isNotBlank() }, CloudinaryMedia.WIDTH_PREVIEW)
+        return storedPoster?.let { R2Media.optimizedImageUrl(it, R2Media.WIDTH_PREVIEW) ?: it }
     }
 
     fun resolvedCommentCount(): Int {

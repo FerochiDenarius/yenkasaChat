@@ -7,7 +7,7 @@ import com.google.gson.Gson
 import xyz.yenkasa.app.model.CachedFeedPayload
 import xyz.yenkasa.app.model.Post
 import xyz.yenkasa.app.util.AppLocalStore
-import xyz.yenkasa.app.util.CloudinaryMedia
+import xyz.yenkasa.app.util.R2Media
 import java.security.MessageDigest
 import java.util.Locale
 
@@ -126,7 +126,7 @@ class FeedCacheController(
             }
             post.userId.profileImage?.takeIf { it.isNotBlank() }?.let { url ->
                 Glide.with(fragment)
-                    .load(CloudinaryMedia.optimizedImageUrl(url, CloudinaryMedia.WIDTH_AVATAR))
+                    .load(R2Media.optimizedImageUrl(url, R2Media.WIDTH_AVATAR))
                     .preload()
             }
         }

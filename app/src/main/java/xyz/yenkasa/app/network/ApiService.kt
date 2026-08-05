@@ -143,6 +143,13 @@ interface ApiService {
     @POST("messages")
     fun sendMessage(@Body body: Map<String, @JvmSuppressWildcards Any?>): Call<ChatMessage>
 
+    @Multipart
+    @POST("messages/upload")
+    fun uploadChatMedia(
+        @Part file: MultipartBody.Part,
+        @Part("type") type: RequestBody
+    ): Call<ChatMediaUploadResponse>
+
     @GET("messages/{roomId}")
     fun getMessages(@Path("roomId") roomId: String): Call<List<ChatMessage>>
 

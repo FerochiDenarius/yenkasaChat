@@ -232,11 +232,15 @@
     <string name="password">Password</string>
     <string name="forgot_password_question">Forgot password?</string>
     <string name="log_in_caps">LOG IN</string>
+    <string name="login_or">OR</string>
+    <string name="continue_with_google">Continue with Google</string>
+    <string name="continue_with_apple">Continue with Apple</string>
     <string name="no_account_question">Don’t have an account?</string>
     <string name="sign_up">Sign Up</string>
     <string name="login_security_note">Your data is safe with us. We never share your information.</string>
     <string name="register_title">Create your account</string>
     <string name="register_subtitle">Join Yenkasa and start your community journey</string>
+    <string name="register_brand_tagline">Connect. Share. Grow.</string>
     <string name="email_address">Email address</string>
     <string name="phone_number">Phone number</string>
     <string name="country">Country</string>

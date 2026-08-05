@@ -17,8 +17,8 @@ android {
         applicationId = "xyz.yenkasa.app"
         minSdk = 21
         targetSdk = 36
-        versionCode = 66
-        versionName = "5.9"
+        versionCode = 70
+        versionName = "6.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
@@ -110,10 +110,6 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
 
-    implementation("com.cloudinary:cloudinary-android:3.1.2") {
-        exclude(group = "com.facebook.fresco")
-        exclude(group = "com.facebook.soloader")
-    }
     implementation("com.facebook.fresco:fresco:3.6.0")
     implementation("com.facebook.fresco:nativeimagefilters:3.6.0")
     implementation("com.facebook.fresco:nativeimagetranscoder:3.6.0")

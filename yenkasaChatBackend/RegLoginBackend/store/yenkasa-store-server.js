@@ -11,6 +11,7 @@ const mediaStorage = require('../services/mediaStorage.service');
 
 const upload = multer();
 const API_BASE = process.env.TRICIABALES_API_BASE || 'http://134.209.182.39:8080';
+const STORE_API_TIMEOUT_MS = Number(process.env.TRICIABALES_API_TIMEOUT_MS || 10000);
 const STORE_PROFILE_DEFAULTS = {
   key: 'default',
   storeName: 'Yenkasa Store',
@@ -19,6 +20,20 @@ const STORE_PROFILE_DEFAULTS = {
   announcementText: '',
   announcementEnabled: false
 };
+
+function normalizeStoreLogoUrl(logoUrl = '') {
+  const value = String(logoUrl || '').trim();
+
+  if (!value) {
+    return STORE_PROFILE_DEFAULTS.logoUrl;
+  }
+
+  if (value.includes('storage.googleapis.com/yenkasa-media/')) {
+    return STORE_PROFILE_DEFAULTS.logoUrl;
+  }
+
+  return value;
+}
 
 function maskEmail(email) {
   const raw = String(email || '').trim();
@@ -88,7 +103,7 @@ function serializeStoreProfile(profile) {
 
   return {
     storeName: source.storeName || STORE_PROFILE_DEFAULTS.storeName,
-    logoUrl: source.logoUrl || STORE_PROFILE_DEFAULTS.logoUrl,
+    logoUrl: normalizeStoreLogoUrl(source.logoUrl),
     announcementTitle: source.announcementTitle || '',
     announcementText: source.announcementText || '',
     announcementEnabled: Boolean(source.announcementEnabled),
@@ -132,7 +147,7 @@ async function saveStoreLogo(file) {
     return '';
   }
 
-  const result = await mediaStorage.upload(file, {
+  const result = await mediaStorage.uploadToCloudinary(file, {
     folder: 'store',
     type: 'image',
     area: 'store_logo',
@@ -835,7 +850,8 @@ module.exports = function (app) {
   app.get('/triciabales-api/api/triciabales', async (req, res) => {
     try {
       const response = await axios.get(
-        `${API_BASE}/api/triciabales`
+        `${API_BASE}/api/triciabales`,
+        { timeout: STORE_API_TIMEOUT_MS }
       );
 
       res.json(response.data);
@@ -847,8 +863,10 @@ module.exports = function (app) {
         err.response?.data || err.message
       );
 
-      res.status(err.response?.status || 500).json(
-        err.response?.data || { error: err.message }
+      const status = err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT' ? 504 : 500;
+
+      res.status(err.response?.status || status).json(
+        err.response?.data || { error: err.message, upstream: API_BASE }
       );
     }
   });

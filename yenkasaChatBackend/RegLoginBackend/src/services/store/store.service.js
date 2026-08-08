@@ -81,6 +81,17 @@ function createStoreService(rootDir, StoreProfile) {
       .startsWith('version https://git-lfs.github.com/spec/v1');
   }
 
+  function isUsableConfiguredLogoUrl(logoUrl = '') {
+    const value = String(logoUrl || '').trim();
+
+    return Boolean(
+      value &&
+      !value.includes('storage.googleapis.com/yenkasa-media/') &&
+      !value.includes('/store/assets/images/YenkasaStoreLogo.png') &&
+      !value.includes('/triciabales_frontend/images/YenkasaStoreLogo.png')
+    );
+  }
+
   async function loadStoreLogoBuffer() {
     const localLogo = await fs.promises.readFile(storeLogoPath);
 
@@ -121,11 +132,7 @@ function createStoreService(rootDir, StoreProfile) {
           const profile = await StoreProfile.findOne({ key: 'default' }).lean();
           const configuredLogoUrl = profile?.logoUrl || '';
 
-          if (
-            configuredLogoUrl &&
-            !configuredLogoUrl.includes('/store/assets/images/YenkasaStoreLogo.png') &&
-            !configuredLogoUrl.includes('/triciabales_frontend/images/YenkasaStoreLogo.png')
-          ) {
+          if (isUsableConfiguredLogoUrl(configuredLogoUrl)) {
             return res.redirect(302, configuredLogoUrl);
           }
 

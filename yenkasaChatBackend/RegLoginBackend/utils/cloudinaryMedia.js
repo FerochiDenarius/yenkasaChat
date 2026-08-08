@@ -144,6 +144,10 @@ function optimizeCloudinaryMediaDeep(payload, stats = { urlsOptimized: 0, poster
 function cloudinaryMediaResponseOptimizer(req, res, next) {
   const originalJson = res.json.bind(res);
   res.json = (body) => {
+    if (String(req.originalUrl || '').startsWith('/triciabales-api/')) {
+      return originalJson(body);
+    }
+
     const stats = { urlsOptimized: 0, postersAdded: 0 };
     const optimizedBody = optimizeCloudinaryMediaDeep(body, stats);
     if (stats.urlsOptimized || stats.postersAdded) {

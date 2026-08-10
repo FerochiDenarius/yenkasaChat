@@ -6,6 +6,9 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.res.Configuration
 import android.os.Bundle
+import android.text.Spannable
+import android.text.SpannableString
+import android.text.style.ForegroundColorSpan
 import android.util.Log
 import android.view.View
 import android.widget.LinearLayout
@@ -76,6 +79,7 @@ class MenuActivity : AppCompatActivity() {
         val btnNotifications = findViewById<LinearLayout>(R.id.btnNotifications)
         val walletBalanceChip = findViewById<LinearLayout>(R.id.walletBalanceChip)
         textMenuWalletBalance = findViewById(R.id.textMenuWalletBalance)
+        findViewById<TextView>(R.id.textMenuTagline).text = buildMenuTagline()
         val currentRole = resolveCurrentRole()
         val canAccessAnalytics = UserPermissions.canAccessAnalytics(currentRole)
         val canModerate = UserPermissions.canModerate(currentRole)
@@ -99,7 +103,7 @@ class MenuActivity : AppCompatActivity() {
 
         textMenuWalletBalance.text = getString(R.string.ykc_amount_format, TokenManager.getCoins(this).toString())
         loadWalletBalance()
-        walletBalanceChip.visibility = if (isNightMode) View.GONE else View.VISIBLE
+        walletBalanceChip.visibility = View.GONE
         walletBalanceChip.setOnClickListener {
             startActivity(Intent(this, CoinWalletActivity::class.java))
         }
@@ -288,5 +292,25 @@ class MenuActivity : AppCompatActivity() {
             }
         }
         return TokenManager.getUserRole(this)
+    }
+
+    private fun buildMenuTagline(): SpannableString {
+        val tagline = getString(R.string.yenkasa_tagline_secure_connect_earn)
+        return SpannableString(tagline).apply {
+            colorTaglineWord(this, "Secure.", R.color.menu_design_accent_cyan)
+            colorTaglineWord(this, "Connect.", R.color.menu_design_accent_purple)
+            colorTaglineWord(this, "Earn.", R.color.menu_design_accent_green)
+        }
+    }
+
+    private fun colorTaglineWord(text: SpannableString, word: String, colorRes: Int) {
+        val start = text.indexOf(word)
+        if (start < 0) return
+        text.setSpan(
+            ForegroundColorSpan(ContextCompat.getColor(this, colorRes)),
+            start,
+            start + word.length,
+            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
     }
 }

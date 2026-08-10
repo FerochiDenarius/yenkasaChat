@@ -25,10 +25,10 @@ object AppUrls {
         get() = siteUrl("ads-disclosure.html")
 
     val deleteAccount: String
-        get() = siteUrl("delete-account")
+        get() = siteUrl("delete-account.html")
 
     val deleteData: String
-        get() = siteUrl("delete-data")
+        get() = siteUrl("delete-data.html")
 
     val moderationDashboard: String
         get() = siteUrl("moderation")

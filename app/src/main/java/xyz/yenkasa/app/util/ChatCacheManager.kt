@@ -3,7 +3,6 @@ package xyz.yenkasa.app.util
 import android.content.Context
 import android.util.Log
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import xyz.yenkasa.app.model.ChatMessage
 import xyz.yenkasa.app.model.ChatRoom
 import java.io.File
@@ -19,8 +18,6 @@ object ChatCacheManager {
 
     private val gson = Gson()
     private val ioExecutor = Executors.newSingleThreadExecutor()
-    private val messagesEnvelopeType = object : TypeToken<MessagesEnvelope>() {}.type
-    private val roomsEnvelopeType = object : TypeToken<RoomsEnvelope>() {}.type
 
     private data class MessagesEnvelope(
         val schemaVersion: Int = CACHE_SCHEMA_VERSION,
@@ -39,7 +36,7 @@ object ChatCacheManager {
     fun getCachedMessages(context: Context, roomId: String): List<ChatMessage> {
         if (roomId.isBlank()) return emptyList()
         val file = messageFile(context, roomId)
-        return readEnvelope<MessagesEnvelope>(file, messagesEnvelopeType)
+        return readEnvelope(file, MessagesEnvelope::class.java)
             ?.takeIf { it.schemaVersion == CACHE_SCHEMA_VERSION && it.roomId == roomId }
             ?.messages
             .orEmpty()
@@ -82,7 +79,7 @@ object ChatCacheManager {
     private fun getCachedRooms(context: Context, userId: String, bucket: String): List<ChatRoom> {
         if (userId.isBlank()) return emptyList()
         val file = roomsFile(context, userId, bucket)
-        return readEnvelope<RoomsEnvelope>(file, roomsEnvelopeType)
+        return readEnvelope(file, RoomsEnvelope::class.java)
             ?.takeIf { it.schemaVersion == CACHE_SCHEMA_VERSION && it.userId == userId }
             ?.rooms
             .orEmpty()
@@ -130,11 +127,11 @@ object ChatCacheManager {
         ).joinToString(separator = "|", prefix = "fallback:")
     }
 
-    private inline fun <reified T> readEnvelope(file: File, envelopeType: java.lang.reflect.Type): T? {
+    private fun <T> readEnvelope(file: File, envelopeClass: Class<T>): T? {
         if (!file.exists()) return null
         return try {
             file.reader().use { reader ->
-                gson.fromJson<T>(reader, envelopeType)
+                gson.fromJson(reader, envelopeClass)
             }
         } catch (error: Exception) {
             Log.w(TAG, "Ignoring unreadable chat cache: ${file.name}", error)

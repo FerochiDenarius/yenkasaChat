@@ -1,14 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/menu_background"
+    android:background="@drawable/bg_menu_design_screen">
+
+    <View
+        android:layout_width="250dp"
+        android:layout_height="250dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="42dp"
+        android:layout_marginEnd="-86dp"
+        android:alpha="0.6"
+        android:background="@drawable/bg_menu_design_circle" />
+
+    <ImageView
+        android:layout_width="96dp"
+        android:layout_height="54dp"
+        android:layout_gravity="start|top"
+        android:layout_marginStart="-30dp"
+        android:layout_marginTop="118dp"
+        android:alpha="0.55"
+        android:contentDescription="@null"
+        android:rotation="-24"
+        android:src="@drawable/bg_login_leaf" />
+
+    <ImageView
+        android:layout_width="112dp"
+        android:layout_height="63dp"
+        android:layout_gravity="end|bottom"
+        android:layout_marginEnd="-34dp"
+        android:layout_marginBottom="16dp"
+        android:alpha="0.55"
+        android:contentDescription="@null"
+        android:rotation="-52"
+        android:src="@drawable/bg_login_leaf" />
+
+<ScrollView
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent"
     android:clipToPadding="false"
     android:fillViewport="true"
-    android:paddingHorizontal="14dp"
-    android:paddingTop="34dp"
-    android:paddingBottom="14dp"
+    android:paddingHorizontal="24dp"
+    android:paddingTop="46dp"
+    android:paddingBottom="18dp"
     android:scrollbars="none">
 
     <LinearLayout
@@ -22,12 +58,13 @@
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingHorizontal="12dp"
-            android:paddingBottom="18dp">
+            android:paddingHorizontal="14dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="26dp">
 
             <ImageView
-                android:layout_width="52dp"
-                android:layout_height="52dp"
+                android:layout_width="70dp"
+                android:layout_height="70dp"
                 android:contentDescription="@string/yenkasa_title"
                 android:scaleType="fitCenter"
                 android:src="@drawable/ic_logo_emblem" />
@@ -35,7 +72,7 @@
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
+                android:layout_marginStart="22dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
@@ -44,18 +81,19 @@
                     android:layout_height="wrap_content"
                     android:includeFontPadding="false"
                     android:text="@string/yenkasa_title"
-                    android:textColor="@color/menu_primary_text"
-                    android:textSize="18sp"
+                    android:textColor="@color/menu_design_primary_text"
+                    android:textSize="28sp"
                     android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/textMenuTagline"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="3dp"
+                    android:layout_marginTop="8dp"
                     android:includeFontPadding="false"
                     android:text="@string/yenkasa_tagline_secure_connect_earn"
-                    android:textColor="@color/menu_secondary_text"
-                    android:textSize="12sp" />
+                    android:textColor="@color/menu_design_secondary_text"
+                    android:textSize="18sp" />
             </LinearLayout>
 
             <LinearLayout
@@ -65,7 +103,8 @@
                 android:background="@drawable/bg_menu_wallet_chip"
                 android:gravity="center"
                 android:orientation="horizontal"
-                android:paddingHorizontal="12dp">
+                android:paddingHorizontal="12dp"
+                android:visibility="gone">
 
                 <ImageView
                     android:layout_width="16dp"
@@ -89,7 +128,8 @@
                     android:layout_height="18dp"
                     android:layout_marginStart="3dp"
                     android:contentDescription="@null"
-                    android:src="@drawable/ic_chevron_right" />
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/menu_design_chevron" />
             </LinearLayout>
         </LinearLayout>
 
@@ -97,28 +137,31 @@
             android:id="@+id/menuCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/bg_menu_card"
+            android:background="@drawable/bg_menu_design_card"
             android:clipToOutline="true"
+            android:divider="@drawable/divider_menu_design"
+            android:dividerPadding="28dp"
             android:orientation="vertical"
-            android:paddingVertical="6dp">
+            android:paddingVertical="14dp"
+            android:showDividers="middle">
 
             <LinearLayout
                 android:id="@+id/btnContacts"
-                style="@style/MenuItemStyle"
+                style="@style/MenuDesignItemStyle"
                 android:minHeight="58dp"
                 android:foreground="?android:attr/selectableItemBackground">
 
                 <FrameLayout
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:background="@drawable/bg_menu_icon_container">
+                    android:background="@drawable/bg_menu_design_icon_blue">
 
                     <ImageView
                         android:layout_width="26dp"
                         android:layout_height="26dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_contacts"
-                        app:tint="@color/menu_accent" />
+                        app:tint="@color/menu_design_icon_tint" />
                 </FrameLayout>
 
                 <LinearLayout
@@ -132,7 +175,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/contacts"
-                        android:textColor="@color/menu_primary_text"
+                        android:textColor="@color/menu_design_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
 
@@ -141,33 +184,34 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="@string/menu_contacts_subtitle"
-                        android:textColor="@color/menu_secondary_text"
+                        android:textColor="@color/menu_design_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
 
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
-                    android:src="@drawable/ic_chevron_right" />
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/menu_design_chevron" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/btnChatRooms"
-                style="@style/MenuItemStyle"
+                style="@style/MenuDesignItemStyle"
                 android:minHeight="58dp"
                 android:foreground="?android:attr/selectableItemBackground">
 
                 <FrameLayout
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:background="@drawable/bg_menu_icon_container">
+                    android:background="@drawable/bg_menu_design_icon_purple">
 
                     <ImageView
                         android:layout_width="26dp"
                         android:layout_height="26dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_chat"
-                        app:tint="@color/menu_accent" />
+                        app:tint="@color/menu_design_icon_tint_purple" />
                 </FrameLayout>
 
                 <LinearLayout
@@ -181,7 +225,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/chat_rooms"
-                        android:textColor="@color/menu_primary_text"
+                        android:textColor="@color/menu_design_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
 
@@ -190,33 +234,34 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="@string/menu_chat_rooms_subtitle"
-                        android:textColor="@color/menu_secondary_text"
+                        android:textColor="@color/menu_design_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
 
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
-                    android:src="@drawable/ic_chevron_right" />
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/menu_design_chevron" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/btnCommunities"
-                style="@style/MenuItemStyle"
+                style="@style/MenuDesignItemStyle"
                 android:minHeight="58dp"
                 android:foreground="?android:attr/selectableItemBackground">
 
                 <FrameLayout
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:background="@drawable/bg_menu_icon_container">
+                    android:background="@drawable/bg_menu_design_icon_green">
 
                     <ImageView
                         android:layout_width="26dp"
                         android:layout_height="26dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_communities"
-                        app:tint="@color/menu_accent" />
+                        app:tint="@color/menu_design_icon_tint_green" />
                 </FrameLayout>
 
                 <LinearLayout
@@ -230,7 +275,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/communities"
-                        android:textColor="@color/menu_primary_text"
+                        android:textColor="@color/menu_design_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
 
@@ -239,33 +284,34 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="@string/menu_communities_subtitle"
-                        android:textColor="@color/menu_secondary_text"
+                        android:textColor="@color/menu_design_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
 
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
-                    android:src="@drawable/ic_chevron_right" />
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/menu_design_chevron" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/btnAccount"
-                style="@style/MenuItemStyle"
+                style="@style/MenuDesignItemStyle"
                 android:minHeight="58dp"
                 android:foreground="?android:attr/selectableItemBackground">
 
                 <FrameLayout
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:background="@drawable/bg_menu_icon_container">
+                    android:background="@drawable/bg_menu_design_icon_blue">
 
                     <ImageView
                         android:layout_width="26dp"
                         android:layout_height="26dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_account"
-                        app:tint="@color/menu_accent" />
+                        app:tint="@color/menu_design_icon_tint" />
                 </FrameLayout>
 
                 <LinearLayout
@@ -279,7 +325,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/account_info_title"
-                        android:textColor="@color/menu_primary_text"
+                        android:textColor="@color/menu_design_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
 
@@ -288,33 +334,34 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="@string/menu_account_subtitle"
-                        android:textColor="@color/menu_secondary_text"
+                        android:textColor="@color/menu_design_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
 
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
-                    android:src="@drawable/ic_chevron_right" />
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/menu_design_chevron" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/btnCoinWallet"
-                style="@style/MenuItemStyle"
+                style="@style/MenuDesignItemStyle"
                 android:minHeight="58dp"
                 android:foreground="?android:attr/selectableItemBackground">
 
                 <FrameLayout
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:background="@drawable/bg_menu_icon_container">
+                    android:background="@drawable/bg_menu_design_icon_green">
 
                     <ImageView
                         android:layout_width="26dp"
                         android:layout_height="26dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_wallet"
-                        app:tint="@color/menu_accent" />
+                        app:tint="@color/menu_design_icon_tint_green" />
                 </FrameLayout>
 
                 <LinearLayout
@@ -328,7 +375,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/wallet"
-                        android:textColor="@color/menu_primary_text"
+                        android:textColor="@color/menu_design_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
 
@@ -337,33 +384,34 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="@string/menu_wallet_subtitle"
-                        android:textColor="@color/menu_secondary_text"
+                        android:textColor="@color/menu_design_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
 
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
-                    android:src="@drawable/ic_chevron_right" />
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/menu_design_chevron" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/btnEditProfile"
-                style="@style/MenuItemStyle"
+                style="@style/MenuDesignItemStyle"
                 android:minHeight="58dp"
                 android:foreground="?android:attr/selectableItemBackground">
 
                 <FrameLayout
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:background="@drawable/bg_menu_icon_container">
+                    android:background="@drawable/bg_menu_design_icon_purple">
 
                     <ImageView
                         android:layout_width="26dp"
                         android:layout_height="26dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_edit"
-                        app:tint="@color/menu_accent" />
+                        app:tint="@color/menu_design_icon_tint_purple" />
                 </FrameLayout>
 
                 <LinearLayout
@@ -377,7 +425,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/edit_profile"
-                        android:textColor="@color/menu_primary_text"
+                        android:textColor="@color/menu_design_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
 
@@ -386,33 +434,34 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="@string/menu_edit_profile_subtitle"
-                        android:textColor="@color/menu_secondary_text"
+                        android:textColor="@color/menu_design_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
 
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
-                    android:src="@drawable/ic_chevron_right" />
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/menu_design_chevron" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/btnVerifyAccount"
-                style="@style/MenuItemStyle"
+                style="@style/MenuDesignItemStyle"
                 android:minHeight="58dp"
                 android:foreground="?android:attr/selectableItemBackground">
 
                 <FrameLayout
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:background="@drawable/bg_menu_icon_container">
+                    android:background="@drawable/bg_menu_design_icon_green">
 
                     <ImageView
                         android:layout_width="26dp"
                         android:layout_height="26dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_verify"
-                        app:tint="@color/menu_accent" />
+                        app:tint="@color/menu_design_icon_tint_green" />
                 </FrameLayout>
 
                 <LinearLayout
@@ -426,7 +475,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/verify_account"
-                        android:textColor="@color/menu_primary_text"
+                        android:textColor="@color/menu_design_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
 
@@ -435,33 +484,34 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="@string/menu_verify_account_subtitle"
-                        android:textColor="@color/menu_secondary_text"
+                        android:textColor="@color/menu_design_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
 
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
-                    android:src="@drawable/ic_chevron_right" />
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/menu_design_chevron" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/btnAppVerification"
-                style="@style/MenuItemStyle"
+                style="@style/MenuDesignItemStyle"
                 android:minHeight="58dp"
                 android:foreground="?android:attr/selectableItemBackground">
 
                 <FrameLayout
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:background="@drawable/bg_menu_icon_container">
+                    android:background="@drawable/bg_menu_design_icon_purple">
 
                     <ImageView
                         android:layout_width="26dp"
                         android:layout_height="26dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_shield"
-                        app:tint="@color/menu_accent" />
+                        app:tint="@color/menu_design_icon_tint_purple" />
                 </FrameLayout>
 
                 <LinearLayout
@@ -475,7 +525,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/menu_verification_title"
-                        android:textColor="@color/menu_primary_text"
+                        android:textColor="@color/menu_design_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
 
@@ -484,33 +534,34 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="@string/menu_verification_subtitle"
-                        android:textColor="@color/menu_secondary_text"
+                        android:textColor="@color/menu_design_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
 
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
-                    android:src="@drawable/ic_chevron_right" />
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/menu_design_chevron" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/btnPostApproval"
-                style="@style/MenuItemStyle"
+                style="@style/MenuDesignItemStyle"
                 android:minHeight="58dp"
                 android:foreground="?android:attr/selectableItemBackground">
 
                 <FrameLayout
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:background="@drawable/bg_menu_icon_container">
+                    android:background="@drawable/bg_menu_design_icon_green">
 
                     <ImageView
                         android:layout_width="26dp"
                         android:layout_height="26dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_approval"
-                        app:tint="@color/menu_accent" />
+                        app:tint="@color/menu_design_icon_tint_green" />
                 </FrameLayout>
 
                 <LinearLayout
@@ -524,7 +575,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/menu_post_approvals_title"
-                        android:textColor="@color/menu_primary_text"
+                        android:textColor="@color/menu_design_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
 
@@ -533,33 +584,34 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="@string/menu_post_approvals_subtitle"
-                        android:textColor="@color/menu_secondary_text"
+                        android:textColor="@color/menu_design_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
 
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
-                    android:src="@drawable/ic_chevron_right" />
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/menu_design_chevron" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/btnMyAds"
-                style="@style/MenuItemStyle"
+                style="@style/MenuDesignItemStyle"
                 android:minHeight="58dp"
                 android:foreground="?android:attr/selectableItemBackground">
 
                 <FrameLayout
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:background="@drawable/bg_menu_icon_container">
+                    android:background="@drawable/bg_menu_design_icon_purple">
 
                     <ImageView
                         android:layout_width="26dp"
                         android:layout_height="26dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_wallet"
-                        app:tint="@color/menu_accent" />
+                        app:tint="@color/menu_design_icon_tint_purple" />
                 </FrameLayout>
 
                 <LinearLayout
@@ -573,7 +625,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/menu_my_ads_title"
-                        android:textColor="@color/menu_primary_text"
+                        android:textColor="@color/menu_design_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
 
@@ -582,33 +634,34 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="@string/menu_my_ads_subtitle"
-                        android:textColor="@color/menu_secondary_text"
+                        android:textColor="@color/menu_design_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
 
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
-                    android:src="@drawable/ic_chevron_right" />
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/menu_design_chevron" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/btnMyCommunities"
-                style="@style/MenuItemStyle"
+                style="@style/MenuDesignItemStyle"
                 android:minHeight="58dp"
                 android:foreground="?android:attr/selectableItemBackground">
 
                 <FrameLayout
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:background="@drawable/bg_menu_icon_container">
+                    android:background="@drawable/bg_menu_design_icon_blue">
 
                     <ImageView
                         android:layout_width="26dp"
                         android:layout_height="26dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_communities"
-                        app:tint="@color/menu_accent" />
+                        app:tint="@color/menu_design_icon_tint" />
                 </FrameLayout>
 
                 <LinearLayout
@@ -622,7 +675,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/menu_my_communities_title"
-                        android:textColor="@color/menu_primary_text"
+                        android:textColor="@color/menu_design_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
 
@@ -631,19 +684,20 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="@string/menu_my_communities_subtitle"
-                        android:textColor="@color/menu_secondary_text"
+                        android:textColor="@color/menu_design_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
 
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
-                    android:src="@drawable/ic_chevron_right" />
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/menu_design_chevron" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/btnAdsApproval"
-                style="@style/MenuItemStyle"
+                style="@style/MenuDesignItemStyle"
                 android:minHeight="58dp"
                 android:foreground="?android:attr/selectableItemBackground"
                 android:visibility="gone">
@@ -651,14 +705,14 @@
                 <FrameLayout
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:background="@drawable/bg_menu_icon_container">
+                    android:background="@drawable/bg_menu_design_icon_blue">
 
                     <ImageView
                         android:layout_width="26dp"
                         android:layout_height="26dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_approval"
-                        app:tint="@color/menu_accent" />
+                        app:tint="@color/menu_design_icon_tint" />
                 </FrameLayout>
 
                 <LinearLayout
@@ -672,7 +726,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/menu_approve_ads_title"
-                        android:textColor="@color/menu_primary_text"
+                        android:textColor="@color/menu_design_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
 
@@ -681,19 +735,20 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="@string/menu_approve_ads_subtitle"
-                        android:textColor="@color/menu_secondary_text"
+                        android:textColor="@color/menu_design_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
 
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
-                    android:src="@drawable/ic_chevron_right" />
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/menu_design_chevron" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/btnCommunityApproval"
-                style="@style/MenuItemStyle"
+                style="@style/MenuDesignItemStyle"
                 android:minHeight="58dp"
                 android:foreground="?android:attr/selectableItemBackground"
                 android:visibility="gone">
@@ -701,14 +756,14 @@
                 <FrameLayout
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:background="@drawable/bg_menu_icon_container">
+                    android:background="@drawable/bg_menu_design_icon_blue">
 
                     <ImageView
                         android:layout_width="26dp"
                         android:layout_height="26dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_approval"
-                        app:tint="@color/menu_accent" />
+                        app:tint="@color/menu_design_icon_tint" />
                 </FrameLayout>
 
                 <LinearLayout
@@ -722,7 +777,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/menu_approve_communities_title"
-                        android:textColor="@color/menu_primary_text"
+                        android:textColor="@color/menu_design_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
 
@@ -731,14 +786,15 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="@string/menu_approve_communities_subtitle"
-                        android:textColor="@color/menu_secondary_text"
+                        android:textColor="@color/menu_design_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
 
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
-                    android:src="@drawable/ic_chevron_right" />
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/menu_design_chevron" />
             </LinearLayout>
 
             <TextView
@@ -749,14 +805,14 @@
                 android:paddingTop="14dp"
                 android:paddingBottom="6dp"
                 android:text="@string/menu_admin_section_title"
-                android:textColor="@color/menu_accent"
+                android:textColor="@color/menu_design_accent_cyan"
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:visibility="gone" />
 
             <LinearLayout
                 android:id="@+id/btnAdminEconomy"
-                style="@style/MenuItemStyle"
+                style="@style/MenuDesignItemStyle"
                 android:minHeight="58dp"
                 android:foreground="?android:attr/selectableItemBackground"
                 android:visibility="gone">
@@ -764,14 +820,14 @@
                 <FrameLayout
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:background="@drawable/bg_menu_icon_container">
+                    android:background="@drawable/bg_menu_design_icon_blue">
 
                     <ImageView
                         android:layout_width="26dp"
                         android:layout_height="26dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_admin_panel"
-                        app:tint="@color/menu_accent" />
+                        app:tint="@color/menu_design_icon_tint" />
                 </FrameLayout>
 
                 <LinearLayout
@@ -785,7 +841,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/menu_admin_economy_title"
-                        android:textColor="@color/menu_primary_text"
+                        android:textColor="@color/menu_design_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
 
@@ -794,19 +850,20 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="@string/menu_admin_economy_subtitle"
-                        android:textColor="@color/menu_secondary_text"
+                        android:textColor="@color/menu_design_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
 
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
-                    android:src="@drawable/ic_chevron_right" />
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/menu_design_chevron" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/btnUserRoleDashboard"
-                style="@style/MenuItemStyle"
+                style="@style/MenuDesignItemStyle"
                 android:minHeight="58dp"
                 android:foreground="?android:attr/selectableItemBackground"
                 android:visibility="gone">
@@ -814,14 +871,14 @@
                 <FrameLayout
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:background="@drawable/bg_menu_icon_container">
+                    android:background="@drawable/bg_menu_design_icon_blue">
 
                     <ImageView
                         android:layout_width="26dp"
                         android:layout_height="26dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_group"
-                        app:tint="@color/menu_accent" />
+                        app:tint="@color/menu_design_icon_tint" />
                 </FrameLayout>
 
                 <LinearLayout
@@ -835,7 +892,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/menu_user_roles_title"
-                        android:textColor="@color/menu_primary_text"
+                        android:textColor="@color/menu_design_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
 
@@ -844,19 +901,20 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="@string/menu_user_roles_subtitle"
-                        android:textColor="@color/menu_secondary_text"
+                        android:textColor="@color/menu_design_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
 
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
-                    android:src="@drawable/ic_chevron_right" />
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/menu_design_chevron" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/btnYenkasaUpdatesComposer"
-                style="@style/MenuItemStyle"
+                style="@style/MenuDesignItemStyle"
                 android:minHeight="58dp"
                 android:foreground="?android:attr/selectableItemBackground"
                 android:visibility="gone">
@@ -864,14 +922,14 @@
                 <FrameLayout
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:background="@drawable/bg_menu_icon_container">
+                    android:background="@drawable/bg_menu_design_icon_blue">
 
                     <ImageView
                         android:layout_width="26dp"
                         android:layout_height="26dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_notifications"
-                        app:tint="@color/menu_accent" />
+                        app:tint="@color/menu_design_icon_tint" />
                 </FrameLayout>
 
                 <LinearLayout
@@ -885,7 +943,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/announcement_menu_title"
-                        android:textColor="@color/menu_primary_text"
+                        android:textColor="@color/menu_design_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
 
@@ -894,33 +952,34 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="@string/announcement_menu_summary"
-                        android:textColor="@color/menu_secondary_text"
+                        android:textColor="@color/menu_design_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
 
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
-                    android:src="@drawable/ic_chevron_right" />
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/menu_design_chevron" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/btnNotifications"
-                style="@style/MenuItemStyle"
+                style="@style/MenuDesignItemStyle"
                 android:minHeight="58dp"
                 android:foreground="?android:attr/selectableItemBackground">
 
                 <FrameLayout
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:background="@drawable/bg_menu_icon_container">
+                    android:background="@drawable/bg_menu_design_icon_blue">
 
                     <ImageView
                         android:layout_width="26dp"
                         android:layout_height="26dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_notifications"
-                        app:tint="@color/menu_accent" />
+                        app:tint="@color/menu_design_icon_tint" />
                 </FrameLayout>
 
                 <LinearLayout
@@ -934,7 +993,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/notifications"
-                        android:textColor="@color/menu_primary_text"
+                        android:textColor="@color/menu_design_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
 
@@ -943,33 +1002,34 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="@string/menu_notifications_subtitle"
-                        android:textColor="@color/menu_secondary_text"
+                        android:textColor="@color/menu_design_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
 
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
-                    android:src="@drawable/ic_chevron_right" />
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/menu_design_chevron" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/btnSettings"
-                style="@style/MenuItemStyle"
+                style="@style/MenuDesignItemStyle"
                 android:minHeight="58dp"
                 android:foreground="?android:attr/selectableItemBackground">
 
                 <FrameLayout
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:background="@drawable/bg_menu_icon_container">
+                    android:background="@drawable/bg_menu_design_icon_blue">
 
                     <ImageView
                         android:layout_width="26dp"
                         android:layout_height="26dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_settings"
-                        app:tint="@color/menu_accent" />
+                        app:tint="@color/menu_design_icon_tint" />
                 </FrameLayout>
 
                 <LinearLayout
@@ -983,7 +1043,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/settings"
-                        android:textColor="@color/menu_primary_text"
+                        android:textColor="@color/menu_design_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
 
@@ -992,14 +1052,15 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="@string/menu_settings_subtitle"
-                        android:textColor="@color/menu_secondary_text"
+                        android:textColor="@color/menu_design_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
 
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
-                    android:src="@drawable/ic_chevron_right" />
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/menu_design_chevron" />
             </LinearLayout>
         </LinearLayout>
 
@@ -1008,19 +1069,19 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:background="@drawable/bg_menu_card"
+            android:background="@drawable/bg_menu_design_card"
             android:orientation="vertical">
 
             <LinearLayout
                 android:id="@+id/btnLogout"
-                style="@style/MenuItemStyle"
+                style="@style/MenuDesignItemStyle"
                 android:minHeight="58dp"
                 android:foreground="?android:attr/selectableItemBackground">
 
                 <FrameLayout
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:background="@drawable/bg_menu_icon_container">
+                    android:background="@drawable/bg_menu_design_icon_blue">
 
                     <ImageView
                         android:layout_width="26dp"
@@ -1041,7 +1102,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/log_out"
-                        android:textColor="@color/menu_primary_text"
+                        android:textColor="@color/menu_design_primary_text"
                         android:textSize="15sp"
                         android:textStyle="bold" />
 
@@ -1050,14 +1111,15 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="@string/menu_logout_subtitle"
-                        android:textColor="@color/menu_secondary_text"
+                        android:textColor="@color/menu_design_secondary_text"
                         android:textSize="12sp" />
                 </LinearLayout>
 
                 <ImageView
                     android:layout_width="22dp"
                     android:layout_height="22dp"
-                    android:src="@drawable/ic_chevron_right" />
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/menu_design_chevron" />
             </LinearLayout>
         </LinearLayout>
 
@@ -1068,7 +1130,8 @@
             android:layout_marginTop="8dp"
             android:gravity="center"
             android:text="@string/menu_security_footer"
-            android:textColor="@color/menu_secondary_text"
+            android:textColor="@color/menu_design_secondary_text"
             android:textSize="11sp" />
     </LinearLayout>
 </ScrollView>
+</FrameLayout>

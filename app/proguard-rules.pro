@@ -25,6 +25,8 @@
 -keep class xyz.yenkasa.app.model.** { *; }
 -keep class xyz.yenkasa.app.network.** { *; }
 -keep class xyz.yenkasa.app.api.** { *; }
+-keep class xyz.yenkasa.app.util.ChatCacheManager$MessagesEnvelope { *; }
+-keep class xyz.yenkasa.app.util.ChatCacheManager$RoomsEnvelope { *; }
 -keep interface xyz.yenkasa.app.network.** { *; }
 -keep interface xyz.yenkasa.app.api.** { *; }
 

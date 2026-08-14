@@ -140,7 +140,7 @@ function createStoreService(rootDir, StoreProfile) {
 
           res.setHeader('Content-Type', 'image/png');
           res.setHeader('Content-Length', logo.length);
-          res.setHeader('Cache-Control', 'public, max-age=3600');
+          res.setHeader('Cache-Control', 'no-store, max-age=0');
           return res.send(logo);
         } catch (err) {
           console.error('Yenkasa Store logo error:', err.message);

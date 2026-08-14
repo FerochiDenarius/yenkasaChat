@@ -1,9 +1,21 @@
 (function () {
   const SETTINGS_URL = "/triciabales-api/api/store-profile";
   const FALLBACK_LOGO = "/store/assets/images/YenkasaStoreLogo.png";
+  const FALLBACK_LOGO_VERSION = "20260814-store-logo";
+
+  function versionLocalLogoUrl(logoUrl) {
+    const value = String(logoUrl || "").trim() || FALLBACK_LOGO;
+
+    if (!value.startsWith("/store/assets/images/YenkasaStoreLogo.png")) {
+      return value;
+    }
+
+    const separator = value.includes("?") ? "&" : "?";
+    return value.includes("v=") ? value : `${value}${separator}v=${FALLBACK_LOGO_VERSION}`;
+  }
 
   function updateLogos(profile) {
-    const logoUrl = profile?.logoUrl || FALLBACK_LOGO;
+    const logoUrl = versionLocalLogoUrl(profile?.logoUrl);
 
     document
       .querySelectorAll('img[alt*="Yenkasa Store logo"], img[data-store-logo]')

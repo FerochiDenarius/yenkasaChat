@@ -146,7 +146,9 @@ class FeedChromeController(
         communitiesBar.visibility = View.GONE
         feedFilterBar.visibility = View.GONE
         floatingWalletCard.visibility = View.GONE
-        fabYenkasaLive.visibility = View.GONE
+        fabYenkasaLive.visibility = View.VISIBLE
+        fabYenkasaLive.alpha = 1f
+        fabYenkasaLive.bringToFront()
         fabCreatePost.visibility = View.VISIBLE
         fabCreatePost.alpha = 1f
         fabCreatePost.bringToFront()

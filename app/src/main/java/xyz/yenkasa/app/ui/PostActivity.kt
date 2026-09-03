@@ -50,6 +50,7 @@ import retrofit2.Response
 import java.io.File
 import java.io.IOException
 import java.net.SocketTimeoutException
+import android.webkit.MimeTypeMap
 import org.json.JSONObject
 import java.util.UUID
 import kotlin.math.roundToInt
@@ -561,7 +562,7 @@ class PostActivity : AppCompatActivity() {
                     jpegQuality = 82
                 ) ?: getFileFromUri(uriToUpload)
                     ?: throw IOException("File could not be read")
-                val mime = contentResolver.getType(uriToUpload) ?: "application/octet-stream"
+                val mime = resolveUploadMimeType(uriToUpload, file, mediaType)
                 preparedParts.add(PreparedUploadPart(fieldName, file, mime))
             } catch (e: Exception) {
                 Log.e("PostActivity", "Error preparing media", e)
@@ -818,6 +819,25 @@ class PostActivity : AppCompatActivity() {
         } catch (e: IOException) {
             Log.e("PostActivity", "Failed to copy URI to file", e)
             null
+        }
+    }
+
+    private fun resolveUploadMimeType(uri: Uri, file: File, mediaType: String): String {
+        contentResolver.getType(uri)
+            ?.takeIf { it.startsWith("image/") || it.startsWith("video/") || it.startsWith("audio/") }
+            ?.let { return it }
+
+        val extension = file.extension.takeIf { it.isNotBlank() }?.lowercase()
+        val mappedType = extension
+            ?.let { MimeTypeMap.getSingleton().getMimeTypeFromExtension(it) }
+            ?.takeIf { it.startsWith("image/") || it.startsWith("video/") || it.startsWith("audio/") }
+        if (!mappedType.isNullOrBlank()) return mappedType
+
+        return when (mediaType) {
+            "image" -> "image/jpeg"
+            "video" -> "video/mp4"
+            "audio" -> "audio/mpeg"
+            else -> "application/octet-stream"
         }
     }
 

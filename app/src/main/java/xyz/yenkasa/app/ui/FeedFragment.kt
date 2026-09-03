@@ -543,6 +543,14 @@ class FeedFragment : Fragment() {
 
 
     private fun loadFeed(page: Int = 1) {
+        val safeContext = context ?: run {
+            Log.d("FeedFragment", "feed_request_skipped detached page=$page")
+            feedReloadInProgress = false
+            isLoading = false
+            isLoadingMore = false
+            if (::swipeRefreshFeed.isInitialized) swipeRefreshFeed.isRefreshing = false
+            return
+        }
         if (isLoading) {
             Log.d("FeedFragment", "feed_request_skipped loading=true page=$page")
             if (::swipeRefreshFeed.isInitialized) swipeRefreshFeed.isRefreshing = false
@@ -574,7 +582,7 @@ class FeedFragment : Fragment() {
 
         val namesString = names.joinToString(",")
         if (namesString.isNotBlank()) {
-            AppLocalStore.saveFeedCacheCommunityNames(requireContext(), namesString)
+            AppLocalStore.saveFeedCacheCommunityNames(safeContext, namesString)
         }
         val requestGeneration = feedRequestGeneration
         val requestStartedAt = System.currentTimeMillis()
@@ -732,19 +740,21 @@ class FeedFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        val safeContext = context ?: return
         updateOfflineBanner(!isOnline())
         chromeController.onHostResume(floatingWalletViews)
-        WalletBalanceManager.refreshBalance(requireContext())
-        AdEligibilityManager.onAppForeground(requireContext())
-        AdEligibilityManager.setTyping(requireContext(), false)
+        WalletBalanceManager.refreshBalance(safeContext)
+        AdEligibilityManager.onAppForeground(safeContext)
+        AdEligibilityManager.setTyping(safeContext, false)
         playerCoordinator?.resumeActive()
     }
 
     override fun onPause() {
         super.onPause()
+        val safeContext = context
         saveCurrentScrollPosition()
         chromeController.onHostPause()
-        AdEligibilityManager.onAppBackground(requireContext())
+        if (safeContext != null) AdEligibilityManager.onAppBackground(safeContext)
         playerCoordinator?.pauseActive()
     }
 
@@ -924,15 +934,17 @@ class FeedFragment : Fragment() {
 
     private fun saveCurrentScrollPosition() {
         if (!::layoutManager.isInitialized) return
+        val safeContext = context ?: return
         val position = layoutManager.findFirstVisibleItemPosition()
         if (position == RecyclerView.NO_POSITION) return
-        AppLocalStore.saveFeedScrollPosition(requireContext(), activeCacheKey, position)
+        AppLocalStore.saveFeedScrollPosition(safeContext, activeCacheKey, position)
         Log.d("FeedFragment", "feed_scroll_saved key=$activeCacheKey position=$position")
     }
 
     private fun restoreScrollPositionIfNeeded(cacheKey: String) {
         if (!restoredScrollCacheKeys.add(cacheKey)) return
-        val position = AppLocalStore.getFeedScrollPosition(requireContext(), cacheKey)
+        val safeContext = context ?: return
+        val position = AppLocalStore.getFeedScrollPosition(safeContext, cacheKey)
         if (position <= 0 || posts.isEmpty()) return
         recyclerView.post {
             val bounded = position.coerceAtMost((recyclerView.adapter?.itemCount ?: posts.size) - 1)

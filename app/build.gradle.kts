@@ -17,8 +17,8 @@ android {
         applicationId = "xyz.yenkasa.app"
         minSdk = 21
         targetSdk = 36
-        versionCode = 1000
-        versionName = "6.3"
+        versionCode = 75
+        versionName = "6.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
@@ -72,7 +72,7 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
         jniLibs {
-            useLegacyPackaging = false
+            useLegacyPackaging = true
         }
     }
 }
@@ -151,7 +151,7 @@ dependencies {
     implementation("androidx.media3:media3-ui:1.4.1")
     implementation("androidx.media3:media3-exoplayer-dash:1.4.1")
     implementation("androidx.media3:media3-session:1.4.1")
-    implementation("io.agora.rtc:full-sdk:4.5.2")
+    implementation("io.agora.rtc:full-rtc-basic:4.6.3")
 
     implementation("com.jakewharton.threetenabp:threetenabp:1.4.6")
 

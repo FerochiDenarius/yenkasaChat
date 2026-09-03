@@ -8,6 +8,7 @@ import android.net.NetworkRequest
 import android.os.Build
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
@@ -25,14 +26,15 @@ class FeedNetworkController(
 
     fun updateOfflineBanner(offlineBanner: TextView, isOffline: Boolean) {
         if (isOffline) {
-            offlineBanner.text = fragment.getString(R.string.offline_mode_saved_feed)
+            offlineBanner.text = offlineBanner.context.getString(R.string.offline_mode_saved_feed)
         }
         offlineBanner.visibility = if (isOffline) android.view.View.VISIBLE else android.view.View.GONE
     }
 
     fun isOnline(): Boolean {
+        val context = fragment.context ?: return false
         val manager = connectivityManager
-            ?: fragment.requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            ?: context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val network = manager.activeNetwork ?: return false
             val capabilities = manager.getNetworkCapabilities(network) ?: return false
@@ -48,21 +50,22 @@ class FeedNetworkController(
         shouldReload: () -> Boolean,
         onReload: () -> Unit
     ) {
+        val context = fragment.context ?: return
         connectivityManager =
-            fragment.requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val manager = connectivityManager ?: return
         updateOfflineBanner(offlineBanner, !isOnline())
 
         networkCallback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
-                fragment.viewLifecycleOwner.lifecycleScope.launch {
+                launchWhenViewAlive {
                     updateOfflineBanner(offlineBanner, false)
                     if (shouldReload()) onReload()
                 }
             }
 
             override fun onLost(network: Network) {
-                fragment.viewLifecycleOwner.lifecycleScope.launch {
+                launchWhenViewAlive {
                     updateOfflineBanner(offlineBanner, !isOnline())
                 }
             }
@@ -75,8 +78,9 @@ class FeedNetworkController(
     }
 
     fun scheduleBackgroundFeedSync() {
+        val context = fragment.context?.applicationContext ?: return
         val workRequest = PeriodicWorkRequestBuilder<FeedSyncWorker>(15, TimeUnit.MINUTES).build()
-        WorkManager.getInstance(fragment.requireContext().applicationContext)
+        WorkManager.getInstance(context)
             .enqueueUniquePeriodicWork("feed_sync", ExistingPeriodicWorkPolicy.KEEP, workRequest)
     }
 
@@ -88,5 +92,17 @@ class FeedNetworkController(
         }
         networkCallback = null
         connectivityManager = null
+    }
+
+    private fun launchWhenViewAlive(block: () -> Unit) {
+        val owner = runCatching { fragment.viewLifecycleOwner }.getOrNull() ?: return
+        if (!fragment.isAdded || fragment.context == null) return
+        owner.lifecycleScope.launch {
+            if (
+                fragment.context == null ||
+                owner.lifecycle.currentState == Lifecycle.State.DESTROYED
+            ) return@launch
+            block()
+        }
     }
 }

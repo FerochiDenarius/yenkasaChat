@@ -9,7 +9,10 @@
     "worker:yme": "node src/yme/workers/yme.worker.js",
     "migrate-media": "node scripts/migrateMediaToGcs.js",
     "upload:static-assets": "node scripts/uploadStaticAssetsToCloudinary.js",
-    "test": "node --test"
+    "test": "node --test",
+    "test:coverage": "node --test --experimental-test-coverage",
+    "lint": "eslint . --ignore-pattern node_modules --ignore-pattern public --ignore-pattern uploads",
+    "format:check": "prettier --check src/app.js src/server.js src/config/apiRoutes.js src/middleware/errorHandler.js src/middleware/requestContext.js src/middleware/validate.js src/observability/*.js tests/observability.test.js routes/auth.js"
   },
   "engines": {
     "node": "20.x"
@@ -44,6 +47,10 @@
     "twilio": "^5.7.3"
   },
   "devDependencies": {
-    "nodemon": "^3.1.0"
+    "c8": "^10.1.3",
+    "eslint": "^9.39.5",
+    "globals": "^17.13.0",
+    "nodemon": "^3.1.0",
+    "prettier": "^3.9.10"
   }
 }

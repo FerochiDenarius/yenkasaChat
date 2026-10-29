@@ -1,32 +1,31 @@
-// ✅ Debug startup log
-console.log("✅✅✅ routes/auth.js - File loaded by server.js ✅✅✅");
-
 const express = require('express');
 const router = express.Router();
-const bcrypt = require('bcryptjs'); 
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const User = require('../models/user.model'); 
+const User = require('../models/user.model');
 const Community = require('../models/community.model');
 const ActivityLog = require('../models/activityLog.model');
 const { applyPrivilegedRole } = require('../services/adminBootstrap.service');
 const {
   buildCountryVerification,
   normalizeCountryLabel,
-  recordCountrySecuritySignal
+  recordCountrySecuritySignal,
 } = require('../services/regionalRewards.service');
 const { publishIntelligenceEvent } = require('../src/intelligence/services/eventPublisher.service');
+const { validateAuthBody } = require('../src/middleware/validate');
+const logger = require('../src/observability/logger');
 
+logger.info('Auth routes loaded');
 
 // ✅ Sanitize helper
-const sanitize = (val) =>
-  typeof val === 'string' ? val.trim().substring(0, 255) : val;
+const sanitize = (val) => (typeof val === 'string' ? val.trim().substring(0, 255) : val);
 
 // ✅ Environment secrets check
 if (!process.env.ACCESS_TOKEN_SECRET || !process.env.REFRESH_TOKEN_SECRET) {
-  console.error("❌❌❌ routes/auth.js - Missing ACCESS_TOKEN_SECRET or REFRESH_TOKEN_SECRET! ❌❌❌");
+  logger.error('Auth token secrets are missing');
   throw new Error('ACCESS_TOKEN_SECRET or REFRESH_TOKEN_SECRET is not set in environment.');
 }
-console.log("routes/auth.js - Token secrets check passed");
+logger.info('Auth token secrets validated');
 
 const ACCESS_EXPIRES_IN = '120d';
 const REFRESH_EXPIRES_IN = '120d';
@@ -40,7 +39,7 @@ const PUBLIC_ROLE_PRIORITY = [
   'top_vendor',
   'legend',
   'rising_star',
-  'verified_creator'
+  'verified_creator',
 ];
 
 function normalizeRoleKey(role) {
@@ -55,7 +54,7 @@ function getEffectiveRoleName(user) {
   if (STAFF_ROLES.has(staffRole)) return staffRole;
 
   const publicRoles = new Set((user.publicRoles || []).map(normalizeRoleKey));
-  const publicRole = PUBLIC_ROLE_PRIORITY.find(role => publicRoles.has(role));
+  const publicRole = PUBLIC_ROLE_PRIORITY.find((role) => publicRoles.has(role));
   if (publicRole) return publicRole;
 
   return normalizeRoleKey(user.roleName || user.accessRole || user.role?.role || user.role) || 'unverified';
@@ -111,117 +110,82 @@ function publishSuspiciousActivityEvent(req, details = {}) {
   });
 }
 
-router.post('/register', async (req, res) => {
-  console.log("🔥 /api/auth/register HIT");
-  console.log("📩 Incoming body:", req.body);
-
+router.post('/register', validateAuthBody('register'), async (req, res) => {
   let { email, phoneNumber, username, location, password, communityId, communityIds, country } = req.body;
 
   try {
-    console.log("🔎 Before sanitize:", { email, phoneNumber, username, location, password, communityId, communityIds, country });
-
     email = email ? sanitize(email.toLowerCase()) : null;
     phoneNumber = phoneNumber ? sanitize(phoneNumber) : null;
     username = username ? sanitize(username.toLowerCase()) : null;
     location = location ? sanitize(location) : null;
     password = password ? sanitize(password) : null;
 
-    console.log("✨ After sanitize:", { email, phoneNumber, username, location, password, communityId, communityIds, country });
-
     // 🌍 COUNTRY VALIDATION
-    const allowedCountries = ["Ghana", "Nigeria"];
+    const allowedCountries = ['Ghana', 'Nigeria'];
 
-    country = country ? sanitize(country) : "Ghana";
-    console.log("🌍 Normalized country (raw):", country);
-
+    country = country ? sanitize(country) : 'Ghana';
     const normalizedCountry = country.trim().toLowerCase();
     const selectedCountry = allowedCountries.find(
-      allowedCountry => allowedCountry.toLowerCase() === normalizedCountry
+      (allowedCountry) => allowedCountry.toLowerCase() === normalizedCountry,
     );
-    console.log("🌍 Normalized country (lowercase):", normalizedCountry);
-
     if (!selectedCountry) {
-      console.log("❌ Country not in allowed list:", country);
       return res.status(400).json({
         success: false,
-        message: "Registration is currently available only in Ghana and Nigeria."
+        message: 'Registration is currently available only in Ghana and Nigeria.',
       });
     }
 
     const countryContext = await buildCountryVerification(req, {
       clientCountry: selectedCountry,
-      currentCountry: selectedCountry
+      currentCountry: selectedCountry,
     });
 
     // Validate required
-    console.log("🔍 Checking required fields…");
-    const requestedCommunityIds = Array.isArray(communityIds)
-      ? communityIds
-      : (communityId ? [communityId] : []);
-    const selectedCommunityIds = [...new Set(
-      requestedCommunityIds
-        .map(id => id?.toString().trim())
-        .filter(Boolean)
-    )];
+    const requestedCommunityIds = Array.isArray(communityIds) ? communityIds : communityId ? [communityId] : [];
+    const selectedCommunityIds = [...new Set(requestedCommunityIds.map((id) => id?.toString().trim()).filter(Boolean))];
 
     if (!username || !location || !password || (!email && !phoneNumber) || selectedCommunityIds.length === 0) {
-      console.log("❌ Missing fields:", { username, location, password, email, phoneNumber, communityId, communityIds });
       return res.status(400).json({ message: 'Missing required fields (including communityId)' });
     }
 
     if (selectedCommunityIds.length > 2) {
       return res.status(400).json({
         success: false,
-        message: "You can select up to 2 communities at signup."
+        message: 'You can select up to 2 communities at signup.',
       });
     }
 
-    console.log("🔍 Checking communities:", selectedCommunityIds);
     const communities = await Community.find({
       _id: { $in: selectedCommunityIds },
-      isApproved: true
+      isApproved: true,
     });
 
     if (communities.length !== selectedCommunityIds.length) {
-      console.log("❌ Community invalid:", selectedCommunityIds);
       return res.status(403).json({ message: 'Community not valid or not approved' });
     }
 
     const invalidCountryCommunity = communities.find((community) => {
-      const communityCountry = (community.country || "").trim().toLowerCase();
+      const communityCountry = (community.country || '').trim().toLowerCase();
       return communityCountry !== selectedCountry.toLowerCase();
     });
 
     if (invalidCountryCommunity) {
-      console.log("❌ Community country mismatch:", {
-        selectedCountry,
-        communityCountry: invalidCountryCommunity.country,
-        communityId: invalidCountryCommunity._id
-      });
       return res.status(400).json({
         success: false,
-        message: `Selected community is not available for ${selectedCountry}.`
+        message: `Selected community is not available for ${selectedCountry}.`,
       });
     }
 
-    console.log("🔍 Checking duplicates...");
     const existingUser = await User.findOne({
-      $or: [
-        ...(email ? [{ email }] : []),
-        ...(phoneNumber ? [{ phoneNumber }] : []),
-        { username },
-      ],
+      $or: [...(email ? [{ email }] : []), ...(phoneNumber ? [{ phoneNumber }] : []), { username }],
     });
 
     if (existingUser) {
-      console.log("❌ Duplicate user found:", existingUser._id);
       return res.status(409).json({ message: 'User already exists' });
     }
 
-    console.log("🔐 Hashing password…");
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    console.log("🆕 Creating user…");
     const newUser = new User({
       username,
       location,
@@ -242,20 +206,20 @@ router.post('/register', async (req, res) => {
     await newUser.save();
     await Community.updateMany(
       { _id: { $in: selectedCommunityIds }, members: { $ne: newUser._id } },
-      { $addToSet: { members: newUser._id } }
+      { $addToSet: { members: newUser._id } },
     );
     await Promise.all(
       selectedCommunityIds.map(async (id) => {
         const count = await User.countDocuments({ joinedCommunities: id });
         await Community.findByIdAndUpdate(id, { memberCount: count });
-      })
+      }),
     );
 
     const sameIpAccountCreations = countryContext.ipAddress
       ? await ActivityLog.countDocuments({
           action: 'ACCOUNT_CREATED',
           ipAddress: countryContext.ipAddress,
-          timestamp: { $gte: utcStartOfDay(new Date()) }
+          timestamp: { $gte: utcStartOfDay(new Date()) },
         })
       : 0;
 
@@ -271,26 +235,23 @@ router.post('/register', async (req, res) => {
       metadata: {
         registrationCountry: selectedCountry,
         detectedCountry: countryContext.detectedCountry || '',
-        sameIpAccountCreations
-      }
+        sameIpAccountCreations,
+      },
     });
-
-    console.log("🎉 User created successfully:", newUser._id);
 
     // 🔥 THIS WAS MISSING — MUST RETURN A RESPONSE
     return res.status(201).json({
       success: true,
-      message: "User registered successfully",
+      message: 'User registered successfully',
       userId: newUser._id,
       country: newUser.country,
       verifiedCountry: newUser.verifiedCountry || '',
       detectedCountry: newUser.detectedCountry || '',
       countryConfidence: newUser.countryConfidence || 0,
-      countryVerificationStatus: newUser.countryVerificationStatus || 'unknown'
+      countryVerificationStatus: newUser.countryVerificationStatus || 'unknown',
     });
-
   } catch (err) {
-    console.error('❌ Register error:', err);
+    logger.error('Registration failed', err);
     if (err.code === 11000) {
       return res.status(409).json({ message: 'Duplicate entry detected (email, phone or username already exists)' });
     }
@@ -298,12 +259,9 @@ router.post('/register', async (req, res) => {
   }
 });
 
-
-
 // ✅ LOGIN
 // ✅ LOGIN (permanent fix for role ref bug)
-router.post('/login', async (req, res) => {
-  console.log("✅ /api/auth/login - ROUTE HANDLER REACHED ✅");
+router.post('/login', validateAuthBody('login'), async (req, res) => {
   const { identifier, password } = req.body;
 
   try {
@@ -356,17 +314,21 @@ router.post('/login', async (req, res) => {
     const countryContext = await buildCountryVerification(req, {
       clientCountry: user.country,
       currentCountry: user.country,
-      userId: user._id
+      userId: user._id,
     });
     const existingVerifiedCountry = normalizeCountryLabel(user.verifiedCountry);
     const detectedCountry = countryContext.detectedCountry || '';
-    const countryMismatch = Boolean(detectedCountry) && existingVerifiedCountry
-      ? normalizeCountryLabel(detectedCountry).toLowerCase() !== existingVerifiedCountry.toLowerCase()
-      : false;
+    const countryMismatch =
+      Boolean(detectedCountry) && existingVerifiedCountry
+        ? normalizeCountryLabel(detectedCountry).toLowerCase() !== existingVerifiedCountry.toLowerCase()
+        : false;
 
     if (detectedCountry) {
       user.detectedCountry = detectedCountry;
-      user.countryConfidence = Math.max(Number(user.countryConfidence || 0), Number(countryContext.countryConfidence || 0));
+      user.countryConfidence = Math.max(
+        Number(user.countryConfidence || 0),
+        Number(countryContext.countryConfidence || 0),
+      );
       if (!existingVerifiedCountry) {
         user.verifiedCountry = detectedCountry;
         user.countryVerificationStatus = 'geoip_verified';
@@ -389,8 +351,8 @@ router.post('/login', async (req, res) => {
         metadata: {
           verificationStatus: user.countryVerificationStatus,
           currentCountry: user.country,
-          detectedCountry
-        }
+          detectedCountry,
+        },
       });
     }
 
@@ -398,31 +360,24 @@ router.post('/login', async (req, res) => {
     const Permission = require('../models/permissions.model');
 
     if (!user.role || typeof user.role === 'string') {
-      const normalized = getEffectiveRoleName(user)
-        .toString()
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, '_');
-      const defaultPerm = await Permission.findOne({ role: normalized }) || await Permission.findOne({ role: 'unverified' });
+      const normalized = getEffectiveRoleName(user).toString().trim().toLowerCase().replace(/\s+/g, '_');
+      const defaultPerm =
+        (await Permission.findOne({ role: normalized })) || (await Permission.findOne({ role: 'unverified' }));
 
       user.role = defaultPerm ? defaultPerm._id : null;
       await user.save(); // 🔹 Persist fix so next login is clean
       user = await User.findById(user._id).populate('role'); // repopulate after fixing
-      console.log(`🩵 Auto-fixed user role for ${user.username} → ${user.role?.role}`);
+      logger.info('User role repaired during login', { userId: user._id });
     }
 
     // ✅ Generate tokens
-    const accessTokenValue = jwt.sign(
-      { userId: user._id },
-      process.env.ACCESS_TOKEN_SECRET,
-      { expiresIn: ACCESS_EXPIRES_IN }
-    );
+    const accessTokenValue = jwt.sign({ userId: user._id }, process.env.ACCESS_TOKEN_SECRET, {
+      expiresIn: ACCESS_EXPIRES_IN,
+    });
 
-    const refreshTokenValue = jwt.sign(
-      { userId: user._id },
-      process.env.REFRESH_TOKEN_SECRET,
-      { expiresIn: REFRESH_EXPIRES_IN }
-    );
+    const refreshTokenValue = jwt.sign({ userId: user._id }, process.env.REFRESH_TOKEN_SECRET, {
+      expiresIn: REFRESH_EXPIRES_IN,
+    });
 
     // ✅ Update refresh token
     user.refreshToken = refreshTokenValue;
@@ -434,7 +389,12 @@ router.post('/login', async (req, res) => {
     const effectiveRoleName = getEffectiveRoleName(user);
     const privilegedRoleApplied = await applyPrivilegedRole(user);
     const roleNameAfterPrivilegeCheck = getEffectiveRoleName(user);
-    if (privilegedRoleApplied || (STAFF_ROLES.has(roleNameAfterPrivilegeCheck) && (user.roleName !== roleNameAfterPrivilegeCheck || user.accessRole !== roleNameAfterPrivilegeCheck.toUpperCase()))) {
+    if (
+      privilegedRoleApplied ||
+      (STAFF_ROLES.has(roleNameAfterPrivilegeCheck) &&
+        (user.roleName !== roleNameAfterPrivilegeCheck ||
+          user.accessRole !== roleNameAfterPrivilegeCheck.toUpperCase()))
+    ) {
       user.roleName = roleNameAfterPrivilegeCheck;
       user.accessRole = roleNameAfterPrivilegeCheck.toUpperCase();
       await user.save();
@@ -467,35 +427,33 @@ router.post('/login', async (req, res) => {
     }
 
     // ✅ Return clean JSON with role details
-   res.json({
-  user: {
-    _id: user._id,
-    email: user.email,
-    phoneNumber: user.phoneNumber,
-    phone: user.phoneNumber,
-    username: user.username,
-    location: user.location,
-    verified: user.verified,
-    playerId: user.playerId || null,
-    role: user.role || {},               // 👈 send full Permission object
-    // optional: send string separately if needed
-    roleName: finalRoleName,
-    accessRole: user.accessRole || finalRoleName.toUpperCase(),
-    staffRole: user.staffRole || null,
-    publicRoles: user.publicRoles || [],
-    country: user.country,
-    verifiedCountry: user.verifiedCountry || '',
-    detectedCountry: user.detectedCountry || '',
-    countryConfidence: user.countryConfidence || 0,
-    countryVerificationStatus: user.countryVerificationStatus || 'unknown',
-  },
-  token: accessTokenValue,
-  refreshToken: refreshTokenValue,
-});
-
-
+    res.json({
+      user: {
+        _id: user._id,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        phone: user.phoneNumber,
+        username: user.username,
+        location: user.location,
+        verified: user.verified,
+        playerId: user.playerId || null,
+        role: user.role || {}, // 👈 send full Permission object
+        // optional: send string separately if needed
+        roleName: finalRoleName,
+        accessRole: user.accessRole || finalRoleName.toUpperCase(),
+        staffRole: user.staffRole || null,
+        publicRoles: user.publicRoles || [],
+        country: user.country,
+        verifiedCountry: user.verifiedCountry || '',
+        detectedCountry: user.detectedCountry || '',
+        countryConfidence: user.countryConfidence || 0,
+        countryVerificationStatus: user.countryVerificationStatus || 'unknown',
+      },
+      token: accessTokenValue,
+      refreshToken: refreshTokenValue,
+    });
   } catch (err) {
-    console.error('❌ Login error:', err);
+    logger.error('Login failed', err);
     publishLoginAttemptEvent(req, {
       status: 'failed',
       reason: 'server_error',
@@ -504,7 +462,6 @@ router.post('/login', async (req, res) => {
     res.status(500).json({ message: 'Server error during login' });
   }
 });
-
 
 // ✅ Debug route
 router.get('/ping', (req, res) => {

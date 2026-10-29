@@ -4,8 +4,8 @@ const path = require('path');
 const helmet = require('helmet');
 const compression = require('compression');
 const cors = require('cors');
-const morgan = require('morgan');
 const listEndpoints = require('express-list-endpoints');
+const mongoose = require('mongoose');
 
 const StoreProfile = require('../models/storeProfile.model');
 const { cloudinaryMediaResponseOptimizer } = require('../utils/cloudinaryMedia');
@@ -19,6 +19,9 @@ const registerPublicContent = require('./config/publicContent');
 const createStoreService = require('./services/store/store.service');
 const createBlogService = require('./services/blog/blog.service');
 const { validateYmeRuntime } = require('./yme/bootstrap/validateYmeRuntime');
+const logger = require('./observability/logger');
+const { render: renderMetrics, requestMetrics } = require('./observability/metrics');
+const requestContext = require('./middleware/requestContext');
 
 const app = express();
 const rootDir = path.resolve(__dirname, '..');
@@ -26,10 +29,16 @@ const rootDir = path.resolve(__dirname, '..');
 app.set('trust proxy', true);
 app.use(redirectMiddleware);
 app.use(softotechPortalProxy);
+app.use(requestContext);
+
+const allowedOrigins = [process.env.CLIENT_URL, process.env.FRONTEND_URL]
+  .filter(Boolean)
+  .map((origin) => origin.replace(/\/$/, ''));
 
 const corsOptions = {
   origin(origin, callback) {
-    callback(null, origin || true);
+    if (!origin || allowedOrigins.includes(origin.replace(/\/$/, ''))) return callback(null, true);
+    return callback(new Error('CORS origin not allowed'));
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -47,6 +56,7 @@ app.use(
   }),
 );
 app.use(express.urlencoded({ extended: true }));
+app.use(requestMetrics);
 app.use(cloudinaryMediaResponseOptimizer);
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
@@ -57,7 +67,7 @@ app.use((req, res, next) => {
 });
 
 validateYmeRuntime();
-console.log('[YME] normalizeText loaded successfully');
+logger.info('YME runtime validated');
 
 require('../store/yenkasa-store-server')(app);
 require('../web/yenkasa-web-server')(app);
@@ -68,7 +78,7 @@ const r2PublicOrigin = (() => {
   if (!r2PublicBaseUrl) return null;
   try {
     return new URL(r2PublicBaseUrl).origin;
-  } catch (error) {
+  } catch {
     return null;
   }
 })();
@@ -86,13 +96,7 @@ app.use(
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", (req, res) => `'nonce-${res.locals.cspNonce}'`],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: [
-          "'self'",
-          'data:',
-          'blob:',
-          ...mediaSources,
-          'https://images.unsplash.com',
-        ],
+        imgSrc: ["'self'", 'data:', 'blob:', ...mediaSources, 'https://images.unsplash.com'],
         mediaSrc: ["'self'", 'blob:', ...mediaSources],
       },
     },
@@ -100,12 +104,9 @@ app.use(
 );
 
 app.use(compression());
-if (process.env.NODE_ENV !== 'test') app.use(morgan('combined'));
 
 registerApiRoutes(app, rootDir);
-console.log('=== Registered endpoints ===');
-console.log(listEndpoints(app));
-console.log('=== End registered endpoints ===');
+logger.info('API routes registered', { endpointCount: listEndpoints(app).length });
 
 app.use(multerError);
 
@@ -115,6 +116,19 @@ app.get('/health', (req, res) => {
     uptime: process.uptime(),
     env: process.env.NODE_ENV,
   });
+});
+
+app.get('/health/ready', (req, res) => {
+  const mongoReady = mongoose.connection.readyState === 1;
+  const ready = mongoReady || process.env.SOFTOTECH_FIRESTORE_ONLY === 'true';
+  res.status(ready ? 200 : 503).json({
+    status: ready ? 'ready' : 'not_ready',
+    checks: { mongodb: mongoReady },
+  });
+});
+
+app.get('/metrics', (req, res) => {
+  res.type('text/plain').send(renderMetrics());
 });
 
 app.use(mp4Headers);

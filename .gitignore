@@ -13,6 +13,10 @@
 .externalNativeBuild
 .cxx
 local.properties
+node_modules/
+.kotlin/
+coverage
+.nyc_output
 
 # Env
 *.env

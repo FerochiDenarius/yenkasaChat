@@ -1,4 +1,15 @@
 {
+  "name": "yenkasa-chat",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test:backend": "npm --prefix yenkasaChatBackend/RegLoginBackend test",
+    "test:backend:coverage": "npm --prefix yenkasaChatBackend/RegLoginBackend run test:coverage",
+    "lint:backend": "npm --prefix yenkasaChatBackend/RegLoginBackend run lint",
+    "format:check": "npm --prefix yenkasaChatBackend/RegLoginBackend run format:check",
+    "test:android": "./gradlew test",
+    "build:web": "npm --prefix yenkasa-web run build"
+  },
   "dependencies": {
     "axios": "^1.14.0",
     "cloudinary": "^1.41.3",

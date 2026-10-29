@@ -5,6 +5,7 @@ const postRoutes = require('../../routes/post.routes');
 const socialRoutes = require('../../routes/social.routes');
 const viewRoutes = require('../../routes/view.routes');
 const deleteAccountPage = require('../../routes/deleteAccount.page');
+const logger = require('../observability/logger');
 
 const API_ROUTE_MOUNTS = [
   ['/api/auth', 'routes/auth'],
@@ -62,14 +63,14 @@ const API_ROUTE_MOUNTS = [
 function safeMount(app, rootDir, routePath, modulePath) {
   try {
     app.use(routePath, require(path.join(rootDir, modulePath)));
-    console.log(`✅ Mounted ${modulePath} at ${routePath}`);
+    logger.debug('Mounted API route', { modulePath, routePath });
   } catch (err) {
-    console.error(`❌ Failed to mount ${modulePath} at ${routePath}: ${err.message}`);
+    logger.error('Failed to mount API route', err, { modulePath, routePath });
   }
 }
 
 function registerApiRoutes(app, rootDir) {
-  console.log('server.js: Mounting API routes...');
+  logger.info('Mounting API routes');
   API_ROUTE_MOUNTS.forEach(([routePath, modulePath]) => {
     safeMount(app, rootDir, routePath, modulePath);
   });
@@ -87,7 +88,7 @@ function registerApiRoutes(app, rootDir) {
     next();
   });
 
-  console.log('✅ Finished mounting API routes.');
+  logger.info('Finished mounting API routes');
 }
 
 module.exports = registerApiRoutes;

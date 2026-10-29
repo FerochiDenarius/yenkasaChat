@@ -1,5 +1,4 @@
-*.jpg filter=lfs diff=lfs merge=lfs -text
-*.png filter=lfs diff=lfs merge=lfs -text
-*.mp4 filter=lfs diff=lfs merge=lfs -text
-*.mov filter=lfs diff=lfs merge=lfs -text
-*.mp3 filter=lfs diff=lfs merge=lfs -text
+# Keep generated and third-party code out of repository source metrics.
+git-filter-repo-2.47.0/ linguist-vendored
+yenkasaChatBackend/RegLoginBackend/public/yenkasa_ai/main.dart.js linguist-generated
+yenkasaChatBackend/RegLoginBackend/public/triciabales_frontend/ linguist-generated
